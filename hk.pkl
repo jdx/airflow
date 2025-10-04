@@ -1,10 +1,12 @@
-amends "/Users/jdx/src/hk/pkl/Config.pkl"
-import "/Users/jdx/src/hk/pkl/Builtins.pkl"
+amends "/home/jdx/src/hk/pkl/Config.pkl"
+import "/home/jdx/src/hk/pkl/Builtins.pkl"
 
 // pre-commit default_language_version:
-//   python: python3
 //   node: 22.19.0
+//   python: python3
 // Note: Use mise.toml to manage language versions in hk
+
+exclude = List("^.*/.*_vendor/")
 
 local linters = new Mapping<String, Step> {
     ["check-merge-conflict"] = Builtins.check_merge_conflict
@@ -1123,16 +1125,16 @@ local custom_steps = new Mapping<String, Step> {
 }
 
 hooks {
-    ["pre-push"] {
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
         steps {
             ...linters
             ...local_hooks
             ...custom_steps
         }
     }
-    ["pre-commit"] {
-        fix = true
-        stash = "git"
+    ["pre-push"] {
         steps {
             ...linters
             ...local_hooks
