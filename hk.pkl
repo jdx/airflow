@@ -2,9 +2,12 @@ amends "../hk/pkl/Config.pkl"
 import "../hk/pkl/Builtins.pkl"
 
 // pre-commit default_language_version:
-//   node: 22.19.0
 //   python: python3
-// Note: Use mise.toml to manage language versions in hk
+//   node: 22.19.0
+// 
+// To set these versions with mise, run:
+//   mise use python@python3
+//   mise use node@22.19.0
 
 local linters = new Mapping<String, Step> {
     ["check-merge-conflict"] = Builtins.check_merge_conflict
@@ -1129,16 +1132,16 @@ local manual_steps = new Mapping<String, Step> {
 }
 
 hooks {
-    ["pre-push"] {
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
         steps {
             ...linters
             ...local_hooks
             ...custom_steps
         }
     }
-    ["pre-commit"] {
-        fix = true
-        stash = "git"
+    ["pre-push"] {
         steps {
             ...linters
             ...local_hooks
