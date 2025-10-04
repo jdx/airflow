@@ -35,48 +35,40 @@ local local_hooks = new Mapping<String, Step> {
     ["upgrade-important-versions"] {
         glob = #"(?x) ^\.pre-commit-config\.yaml$| ^\.github/\.pre-commit-config\.yaml$| ^scripts/ci/prek/update_installers_and_prek\.py$"#
         check = "./scripts/ci/prek/upgrade_important_versions.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check translation completeness (manual)
     ["check-translations-completeness"] {
         check = "./dev/i18n/check_translations_completeness.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Update chart dependencies to latest (manual)
     ["update-chart-dependencies"] {
         glob = List(".pre-commit-config.yaml", "scripts/ci/prek/update_build_dependencies.py")
         check = "./scripts/ci/prek/update_chart_dependencies.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check that TI and TIS have the same attributes
     ["check-taskinstance-tis-attrs"] {
         glob = List("airflow-core/src/airflow/models/taskinstance.py", "airflow-core/src/airflow/models/taskinstancehistory.py")
         check = "./scripts/ci/prek/check_ti_vs_tis_attributes.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check and fix default value of default_deferrable
     ["check-deferrable-default"] {
         glob = #"^(providers/.*/)?airflow/.*/(sensors|operators)/.*\.py$"#
         check = "./scripts/ci/prek/check_deferrable_default.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Update dependencies for providers
     ["update-providers-dependencies"] {
         check = "./scripts/ci/prek/update_providers_dependencies.py"
-        // pass_filenames was false in pre-commit
         // always_run was true in pre-commit
     }
     // Name: Check shared distributions structure
     ["check-shared-distributions-structure"] {
         glob = "^shared/.*$"
         check = "./scripts/ci/prek/check_shared_distributions_structure.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check shared distributions usage
     ["check-shared-distributions-usage"] {
         glob = "^shared/.*$|^.*/pyproject.toml$|^.*/_shared/.*$"
         check = "./scripts/ci/prek/check_shared_distributions_usage.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: No templated field logic checks in operator __init__
     ["validate-operators-init"] {
@@ -152,7 +144,6 @@ local local_hooks = new Mapping<String, Step> {
     ["update-local-yml-file"] {
         glob = List("dev/breeze/src/airflow_breeze/utils/docker_command_utils.py", "scripts/ci/docker_compose/local.yml")
         check = "./scripts/ci/prek/local_yml_mounts.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check dependency of SQL providers
     ["check-sql-dependency-common-data-structure"] {
@@ -163,13 +154,11 @@ local local_hooks = new Mapping<String, Step> {
     ["check-extra-packages-references"] {
         glob = List("airflow-core/docs/extra-packages-ref.rst", "hatch_build.py")
         check = "./scripts/ci/prek/check_extra_packages_ref.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check order of extras in Dockerfile
     ["check-extras-order"] {
         glob = "^Dockerfile$"
         check = "./scripts/ci/prek/check_order_dockerfile_extras.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Generate airflow diagrams
     ["generate-airflow-diagrams"] {
@@ -180,7 +169,6 @@ local local_hooks = new Mapping<String, Step> {
     ["generate-volumes-for-sources"] {
         glob = #"^providers/.*/provider\.yaml$"#
         check = "./scripts/ci/prek/generate_volumes_for_sources.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Prevent deprecated sqlalchemy usage
     ["prevent-deprecated-sqlalchemy-usage"] {
@@ -191,19 +179,16 @@ local local_hooks = new Mapping<String, Step> {
     ["update-supported-versions"] {
         glob = List("airflow-core/docs/installation/supported-versions.rst", "scripts/ci/prek/supported_versions.py", "README.md")
         check = "./scripts/ci/prek/supported_versions.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check that the REVISION_HEADS_MAP is up-to-date
     ["check-revision-heads-map"] {
         glob = #"(?x) ^scripts/ci/prek/version_heads_map\.py$| ^airflow-core/src/airflow/migrations/versions/.*$|^airflow-core/src/airflow/migrations/versions| ^providers/fab/src/airflow/providers/fab/migrations/versions/.*$|^providers/fab/src/airflow/providers/fab/migrations/versions| ^airflow-core/src/airflow/utils/db\.py$| ^providers/fab/src/airflow/providers/fab/auth_manager/models/db\.py$"#
         check = "./scripts/ci/prek/check_revision_heads_map.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Update versions in docs
     ["update-version"] {
         glob = #"^docs|^airflow-core/src/airflow/__init__\.py$|.*/pyproject\.toml$"#
         check = "./scripts/ci/prek/update_versions.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check for pydevd debug statements accidentally left
     ["check-pydevd-left-in-code"] {
@@ -261,13 +246,11 @@ local local_hooks = new Mapping<String, Step> {
     ["check-base-operator-partial-arguments"] {
         glob = #"^airflow-core/src/airflow/models/(?:base|mapped)operator\.py$"#
         check = "./scripts/ci/prek/check_base_operator_partial_arguments.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Sync model __init__ and decorator arguments
     ["check-init-decorator-arguments"] {
         glob = List("task-sdk/src/airflow/sdk/definitions/dag.py", "task-sdk/src/airflow/sdk/definitions/decorators/task_group.py")
         check = "./scripts/ci/prek/check_init_decorator_arguments.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Sync template context variable refs
     ["check-template-context-variable-in-sync"] {
@@ -330,7 +313,6 @@ local local_hooks = new Mapping<String, Step> {
     ["check-apache-license-rat"] {
         glob = "^LICENSE$"
         check = "./scripts/ci/prek/check_license.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check if aiobotocore is an optional dependency only
     ["check-aiobotocore-optional"] {
@@ -340,43 +322,36 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Checks for Boring Cyborg configuration consistency
     ["check-boring-cyborg-configuration"] {
         check = "./scripts/ci/prek/boring_cyborg.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Sort INTHEWILD.md alphabetically
     ["update-in-the-wild-to-be-sorted"] {
         glob = List(".pre-commit-config.yaml", "INTHEWILD.md")
         check = "./scripts/ci/prek/sort_in_the_wild.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Sort and uniquify installed_providers.txt
     ["update-installed-providers-to-be-sorted"] {
         glob = #"^\.pre-commit-config\.yaml$|^.*_installed_providers\.txt$"#
         check = "./scripts/ci/prek/sort_installed_providers.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Sort spelling_wordlist.txt
     ["update-spelling-wordlist-to-be-sorted"] {
         glob = List(".pre-commit-config.yaml", "docs/spelling_wordlist.txt")
         check = "./scripts/ci/prek/sort_spelling_wordlist.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Lint Helm Chart
     ["lint-helm-chart"] {
         glob = "^chart"
         check = "./scripts/ci/prek/lint_helm.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Validate chart annotations
     ["validate-chart-annotations"] {
         glob = #"^chart/Chart\.yaml$"#
         check = "./scripts/ci/prek/validate_chart_annotations.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Kubeconform check on our helm chart
     ["kubeconform"] {
         glob = "^chart"
         check = "./scripts/ci/prek/check_kubeconform.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check Shell scripts syntax correctness
     ["shellcheck"] {
@@ -389,52 +364,44 @@ local local_hooks = new Mapping<String, Step> {
         glob = "^airflow-core/src/airflow/ui/|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/"
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/compile_ui_assets.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Compile FAB provider assets
     ["compile-fab-assets"] {
         glob = "^providers/fab/.*/www/"
         prefix = "mise x pipx:yarn@1.22.21 --"
         check = "./scripts/ci/prek/compile_provider_assets.py fab"
-        // pass_filenames was false in pre-commit
     }
     // Name: Compile Edge provider assets
     ["compile-edge-assets"] {
         glob = "^providers/edge3/.*/www/"
         prefix = "mise x pipx:yarn@1.22.21 --"
         check = "./scripts/ci/prek/compile_provider_assets.py edge"
-        // pass_filenames was false in pre-commit
     }
     // Name: Compile ui assets in dev mode (manual)
     ["compile-ui-assets-dev"] {
         glob = "^airflow-core/src/airflow/ui/|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/"
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/compile_ui_assets_dev.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Provider subpackage init files are there
     ["check-providers-subpackages-init-file-exist"] {
         check = "./scripts/ci/prek/check_providers_subpackages_all_have_init.py"
-        // pass_filenames was false in pre-commit
         // always_run was true in pre-commit
     }
     // Name: Sync integrations list with docs
     ["check-integrations-list-consistent"] {
         glob = #"^scripts/ci/docker-compose/integration-.*\.yml$|^contributing-docs/testing/integration_tests\.rst$"#
         check = "./scripts/ci/prek/check_integrations_list.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Update Breeze README.md with config files hash
     ["update-breeze-readme-config-hash"] {
         glob = List("dev/breeze/pyproject.toml", "dev/breeze/README.md")
         check = "./scripts/ci/prek/update_breeze_config_hash.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Update Airflow's meta-package pyproject.toml
     ["update-pyproject-toml"] {
         glob = #"(?x) ^.*/pyproject\.toml$| ^scripts/ci/prek/update_airflow_pyproject_toml\.py$| ^providers/.*/pyproject\.toml$| ^providers/.*/provider\.yaml$"#
         check = "./scripts/ci/prek/update_airflow_pyproject_toml.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Update Source Date Epoch for reproducible builds
     ["update-reproducible-source-date-epoch"] {
@@ -445,7 +412,6 @@ local local_hooks = new Mapping<String, Step> {
     ["check-breeze-top-dependencies-limited"] {
         glob = "^dev/breeze/.*$"
         check = "./scripts/tools/check_if_limited_dependencies.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check if tests are in the right folders
     ["check-tests-in-the-right-folders"] {
@@ -461,7 +427,6 @@ local local_hooks = new Mapping<String, Step> {
     ["generate-pypi-readme"] {
         glob = #"^README\.md$"#
         check = "./scripts/ci/prek/generate_pypi_readme.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Run markdownlint
     ["lint-markdown"] {
@@ -498,7 +463,6 @@ local local_hooks = new Mapping<String, Step> {
     ["lint-json-schema-4"] {
         glob = List("chart/values.schema.json", "chart/values_schema.schema.json")
         check = "./scripts/ci/prek/lint_json_schema.py"
-        // pass_filenames was false in pre-commit
         // args from pre-commit: --spec-file chart/values_schema.schema.json chart/values.schema.json
         // Consider adding args to check command
     }
@@ -512,7 +476,6 @@ local local_hooks = new Mapping<String, Step> {
     ["lint-json-schema-5"] {
         glob = List("chart/values.yaml", "chart/values.schema.json")
         check = "./scripts/ci/prek/lint_json_schema.py"
-        // pass_filenames was false in pre-commit
         // args from pre-commit: --enforce-defaults --spec-file chart/values.schema.json chart/values.yaml
         // Consider adding args to check command
     }
@@ -552,13 +515,11 @@ track and have security implications. Please remove the zip file from the reposi
     ["lint-chart-schema"] {
         glob = #"^chart/values\.schema\.json$"#
         check = "./scripts/ci/prek/chart_schema.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Inline Dockerfile and Dockerfile.ci scripts
     ["update-inlined-dockerfile-scripts"] {
         glob = #"^Dockerfile$|^Dockerfile\.ci$|^scripts/docker/.*$"#
         check = "./scripts/ci/prek/inline_scripts_in_docker.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check changelogs for duplicate entries
     ["check-changelog-has-no-duplicates"] {
@@ -580,14 +541,12 @@ track and have security implications. Please remove the zip file from the reposi
     ["check-significant-newsfragments-are-valid"] {
         glob = #"^airflow-core/newsfragments/.*\.rst$"#
         check = "./scripts/ci/prek/significant_newsfragments_checker.py"
-        // pass_filenames was false in pre-commit
         // always_run was true in pre-commit
     }
     // Name: Update breeze docs
     ["update-breeze-cmd-output"] {
         glob = #"(?x) ^dev/breeze/.*$| ^\.pre-commit-config\.yaml$| ^scripts/ci/prek/breeze_cmd_line\.py$| ^generated/provider_dependencies\.json$"#
         check = "./scripts/ci/prek/breeze_cmd_line.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check that example dags url include provider versions
     ["check-example-dags-urls"] {
@@ -609,7 +568,6 @@ track and have security implications. Please remove the zip file from the reposi
     ["create-missing-init-py-files-tests"] {
         glob = #"^airflow-core/tests/.*\.py$"#
         check = "./scripts/ci/prek/check_init_in_tests.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Unit tests do not inherit from unittest.TestCase
     ["check-tests-unittest-testcase"] {
@@ -620,7 +578,6 @@ track and have security implications. Please remove the zip file from the reposi
     ["check-provider-docs-valid"] {
         glob = #"^providers/.*/provider\.yaml$|^.*/docs/.*"#
         check = "./scripts/ci/prek/check_provider_docs.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: bandit
     ["bandit"] {
@@ -706,7 +663,6 @@ track and have security implications. Please remove the zip file from the reposi
     ["mypy-dev-2"] {
         glob = #"^.*\.py$"#
         check = "./scripts/ci/prek/mypy_folder.py dev"
-        // pass_filenames was false in pre-commit
     }
     // Name: Run mypy for airflow-core
     ["mypy-airflow-core"] {
@@ -718,7 +674,6 @@ track and have security implications. Please remove the zip file from the reposi
     ["mypy-airflow-core-2"] {
         glob = #"^airflow-core/.*\.py$"#
         check = "./scripts/ci/prek/mypy_folder.py airflow-core"
-        // pass_filenames was false in pre-commit
     }
     // Name: Run mypy for providers
     ["mypy-providers"] {
@@ -730,7 +685,6 @@ track and have security implications. Please remove the zip file from the reposi
     ["mypy-providers-2"] {
         glob = #"^.*\.py$"#
         check = "./scripts/ci/prek/mypy_folder.py providers"
-        // pass_filenames was false in pre-commit
     }
     // Name: Run mypy for task-sdk
     ["mypy-task-sdk"] {
@@ -742,7 +696,6 @@ track and have security implications. Please remove the zip file from the reposi
     ["mypy-task-sdk-2"] {
         glob = #"^.*\.py$"#
         check = "./scripts/ci/prek/mypy_folder.py task-sdk"
-        // pass_filenames was false in pre-commit
     }
     // Name: Run mypy for devel-common
     ["mypy-devel-common"] {
@@ -754,7 +707,6 @@ track and have security implications. Please remove the zip file from the reposi
     ["mypy-devel-common-2"] {
         glob = #"^.*\.py$"#
         check = "./scripts/ci/prek/mypy_folder.py devel-common"
-        // pass_filenames was false in pre-commit
     }
     // Name: Run mypy for airflow-ctl
     ["mypy-airflow-ctl"] {
@@ -767,38 +719,32 @@ track and have security implications. Please remove the zip file from the reposi
     ["mypy-airflow-ctl-2"] {
         glob = #"^.*\.py$"#
         check = "./scripts/ci/prek/mypy_folder.py airflow-ctl"
-        // pass_filenames was false in pre-commit
     }
     // Name: Generate the FastAPI API spec
     ["generate-openapi-spec"] {
         glob = #"^airflow-core/src/airflow/api_fastapi/.*\.py$|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/.*\.py$|^providers/fab/src/airflow/providers/fab/auth_manager/api_fastapi/.*\.py$"#
         exclude = "^airflow-core/src/airflow/api_fastapi/execution_api/.*"
         check = "./scripts/ci/prek/generate_openapi_spec.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Generate the FastAPI API spec for FAB
     ["generate-openapi-spec-fab"] {
         glob = #"^providers/fab/src/airflow/providers/fab/auth_manager/api_fastapi/.*\.py$"#
         check = "./scripts/ci/prek/generate_openapi_spec_providers.py fab"
-        // pass_filenames was false in pre-commit
     }
     // Name: Generate the FastAPI API spec for Edge
     ["generate-openapi-spec-edge"] {
         glob = #"^providers/edge3/src/airflow/providers/edge3/worker_api/.*\.py$"#
         check = "./scripts/ci/prek/generate_openapi_spec_providers.py edge"
-        // pass_filenames was false in pre-commit
     }
     // Name: Generate the FastAPI API spec for Keycloak
     ["generate-openapi-spec-keycloak"] {
         glob = #"^providers/keycloak/src/airflow/providers/keycloak/auth_manager/.*\.py$"#
         check = "./scripts/ci/prek/generate_openapi_spec_providers.py keycloak"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check i18n files validity
     ["check-i18n-json"] {
         glob = #"^airflow-core/src/airflow/ui/public/i18n/locales/.*\.json$"#
         check = "./scripts/ci/prek/check_i18n_json.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Validate provider.yaml files
     ["check-provider-yaml-valid"] {
@@ -815,13 +761,11 @@ track and have security implications. Please remove the zip file from the reposi
     ["update-migration-references"] {
         glob = #"^airflow-core/src/airflow/migrations/versions/.*\.py$|^airflow-core/docs/migrations-ref\.rst$"#
         check = "./scripts/ci/prek/migration_reference.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Generate Datamodels for TaskSDK client
     ["generate-tasksdk-datamodels"] {
         glob = #"^airflow-core/src/airflow/api_fastapi/execution_api/.*\.py$"#
         check = "uv run -p 3.12 --no-progress --active --group codegen --project apache-airflow-task-sdk --directory task-sdk -s dev/generate_task_sdk_models.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Generate Datamodels for AirflowCTL
     ["generate-airflowctl-datamodels"] {
@@ -830,25 +774,21 @@ track and have security implications. Please remove the zip file from the reposi
 bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --project apache-airflow-ctl --directory airflow-ctl/ datamodel-codegen &&
  uv run -p 3.12 --no-dev --no-progress --active --group codegen --project apache-airflow-ctl --directory airflow-ctl/ datamodel-codegen --input="../airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/v2-simple-auth-manager-generated.yaml" --output="src/airflowctl/api/datamodels/auth_generated.py"'
 """#
-        // pass_filenames was false in pre-commit
     }
     // Name: Update ER diagram
     ["update-er-diagram"] {
         glob = #"^airflow-core/src/airflow/migrations/versions/.*\.py$|^airflow-core/docs/migrations-ref\.rst$"#
         check = "./scripts/ci/prek/update_er_diagram.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check the default configuration
     ["check-default-configuration"] {
         glob = #"^airflow-core/src/airflow/config_templates/config\.yml$"#
         check = "./scripts/ci/prek/check_default_configuration.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Generate SVG from Airflow CTL Commands
     ["generate-airflowctl-help-images"] {
         glob = #"^airflow-ctl/src/airflowctl/ctl/cli_config.py$|airflow-ctl/src/airflowctl/api/operations.py|airflow-ctl/src/airflowctl/ctl/commands/.*\.py"#
         check = "./scripts/ci/prek/capture_airflowctl_help.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check imports in providers
     ["check-imports-in-providers"] {
@@ -967,7 +907,6 @@ bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --proje
     ["check-schema-defaults"] {
         glob = List("airflow-core/src/airflow/serialization/schema.json", "airflow-core/src/airflow/serialization/serialized_objects.py")
         check = "./scripts/ci/prek/check_schema_defaults.py"
-        // pass_filenames was false in pre-commit
     }
     // Name: Check for problematic context manager class decorators
     ["check-contextmanager-class-decorators"] {
@@ -1187,16 +1126,16 @@ local custom_steps = new Mapping<String, Step> {
 }
 
 hooks {
-    ["pre-commit"] {
-        fix = true
-        stash = "git"
+    ["pre-push"] {
         steps {
             ...linters
             ...local_hooks
             ...custom_steps
         }
     }
-    ["pre-push"] {
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
         steps {
             ...linters
             ...local_hooks
