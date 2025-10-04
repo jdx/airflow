@@ -2,8 +2,8 @@ amends "/Users/jdx/src/hk/pkl/Config.pkl"
 import "/Users/jdx/src/hk/pkl/Builtins.pkl"
 
 // pre-commit default_language_version:
-//   node: 22.19.0
 //   python: python3
+//   node: 22.19.0
 // Note: Use mise.toml to manage language versions in hk
 
 local linters = new Mapping<String, Step> {
@@ -13,7 +13,7 @@ local linters = new Mapping<String, Step> {
         exclude = #"^providers/ssh/docs/connections/ssh\.rst$"#
     }
     ["end-of-file-fixer"] = (Builtins.newlines) {
-        exclude = List("airflow-core/docs/img/**.dot**", "airflow-core/docs/img/**.sha256**", "****/dist/****", "**LICENSES-ui.txt", "****/openapi-gen/****")
+        exclude = List("airflow-core/docs/img/**.dot", "airflow-core/docs/img/**.sha256", "**/dist/**", "**/LICENSES-ui.txt", "**/openapi-gen/**")
     }
     ["mixed-line-ending"] = Builtins.mixed_line_ending
     ["check-executables-have-shebangs"] = Builtins.check_executables_have_shebangs
@@ -137,7 +137,7 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Check cncf.kubernetes imports used for executors only
     ["check-cncf-k8s-only-for-executors"] {
         glob = #"^airflow-core/src/airflow/.*\.py$"#
-        exclude = List("providers/**/src/airflow/providers/**", "airflow-core/src/airflow/exceptions.py", "airflow-core/src/airflow/models/renderedtifields.py", "airflow-core/src/airflow/serialization/serialized_objects.py", "airflow-core/src/airflow/serialization/serializers/kubernetes.py", "airflow-core/src/airflow/utils/sqlalchemy.py")
+        exclude = List("providers/**/src/airflow/providers/", "airflow-core/src/airflow/exceptions.py", "airflow-core/src/airflow/models/renderedtifields.py", "airflow-core/src/airflow/serialization/serialized_objects.py", "airflow-core/src/airflow/serialization/serializers/kubernetes.py", "airflow-core/src/airflow/utils/sqlalchemy.py")
         check = #"./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.providers\.cncf\.kubernetes' --message "Only few k8s executors exceptions are allowed to use `airflow.providers.cncf.kubernetes`." {{files}}"#
     }
     // Name: Update mounts in the local yml file
@@ -182,12 +182,12 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Check that the REVISION_HEADS_MAP is up-to-date
     ["check-revision-heads-map"] {
-        glob = List("scripts/ci/prek/version_heads_map.py", "airflow-core/src/airflow/migrations/versions/**", "airflow-core/src/airflow/migrations/versions**", "providers/fab/src/airflow/providers/fab/migrations/versions/**", "providers/fab/src/airflow/providers/fab/migrations/versions**", "airflow-core/src/airflow/utils/db.py", "providers/fab/src/airflow/providers/fab/auth_manager/models/db.py")
+        glob = List("scripts/ci/prek/version_heads_map.py", "airflow-core/src/airflow/migrations/versions/**", "airflow-core/src/airflow/migrations/versions", "providers/fab/src/airflow/providers/fab/migrations/versions/**", "providers/fab/src/airflow/providers/fab/migrations/versions", "airflow-core/src/airflow/utils/db.py", "providers/fab/src/airflow/providers/fab/auth_manager/models/db.py")
         check = "./scripts/ci/prek/check_revision_heads_map.py"
     }
     // Name: Update versions in docs
     ["update-version"] {
-        glob = List("docs**", "airflow-core/src/airflow/__init__.py", "****/pyproject.toml")
+        glob = List("docs", "airflow-core/src/airflow/__init__.py", "**/pyproject.toml")
         check = "./scripts/ci/prek/update_versions.py"
     }
     // Name: Check for pydevd debug statements accidentally left
@@ -291,7 +291,7 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Verify usage of Airflow deprecation classes in core
     ["check-core-deprecation-classes"] {
         glob = #"\.py$"#
-        exclude = List("airflow-core/src/airflow/configuration.py", "airflow-core/tests/**", "providers/**/src/airflow/providers/**", "scripts/in_container/verify_providers.py", "providers/**/tests/**", "devel-common/**")
+        exclude = List("airflow-core/src/airflow/configuration.py", "airflow-core/tests/**", "providers/**/src/airflow/providers/", "scripts/in_container/verify_providers.py", "providers/**/tests/**", "devel-common/")
         check = "category=DeprecationWarning|category=PendingDeprecationWarning {{files}}"
     }
     // Name: Check session util imports
@@ -361,7 +361,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Compile ui assets (manual)
     ["compile-ui-assets"] {
-        glob = List("airflow-core/src/airflow/ui/**", "airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/**")
+        glob = List("airflow-core/src/airflow/ui/", "airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/")
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/compile_ui_assets.py"
     }
@@ -379,7 +379,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Compile ui assets in dev mode (manual)
     ["compile-ui-assets-dev"] {
-        glob = List("airflow-core/src/airflow/ui/**", "airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/**")
+        glob = List("airflow-core/src/airflow/ui/", "airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/")
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/compile_ui_assets_dev.py"
     }
@@ -576,7 +576,7 @@ track and have security implications. Please remove the zip file from the reposi
     }
     // Name: Validate provider doc files
     ["check-provider-docs-valid"] {
-        glob = List("providers/**/provider.yaml", "**/docs/****")
+        glob = List("providers/**/provider.yaml", "**/docs/**")
         check = "./scripts/ci/prek/check_provider_docs.py"
     }
     // Name: bandit
@@ -942,7 +942,7 @@ local custom_steps = new Mapping<String, Step> {
     // Original ID: insert-license
     // Name: Add license for all RST files
     ["insert-license-2"] {
-        exclude = List(".github/**", "**newsfragments/**.rst")
+        exclude = List(".github/**", "**/newsfragments/**.rst")
         // files: \.rst$
         // TODO: Configure check and/or fix commands
         // check = "..."
@@ -953,7 +953,7 @@ local custom_steps = new Mapping<String, Step> {
     // Original ID: insert-license
     // Name: Add license for CSS/JS/JSX/PUML/TS/TSX
     ["insert-license-3"] {
-        exclude = List(".github/**", "**ui/openapi-gen/**", "**www/openapi-gen/**", "****/dist/****")
+        exclude = List(".github/**", "**/ui/openapi-gen/", "**/www/openapi-gen/", "**/dist/**")
         // files: \.(css|jsx?|puml|tsx?)$
         // TODO: Configure check and/or fix commands
         // check = "..."
@@ -1018,7 +1018,7 @@ local custom_steps = new Mapping<String, Step> {
     // Original ID: insert-license
     // Name: Add license for all YAML files except Helm templates
     ["insert-license-9"] {
-        exclude = List(".github/**", "chart/templates/****", "****reproducible_build.yaml", "**/v2**.yaml", "**/openapi/_private_ui**.yaml", "**/pnpm-lock.yaml", "****-generated.yaml")
+        exclude = List(".github/**", "chart/templates/**", "**/**reproducible_build.yaml", "**/v2**.yaml", "**/openapi/_private_ui**.yaml", "**/pnpm-lock.yaml", "**/**-generated.yaml")
         // files: \.ya?ml$
         // File type filtering needed
         // TODO: Configure check and/or fix commands
