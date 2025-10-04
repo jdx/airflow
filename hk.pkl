@@ -2,8 +2,8 @@ amends "/Users/jdx/src/hk/pkl/Config.pkl"
 import "/Users/jdx/src/hk/pkl/Builtins.pkl"
 
 // pre-commit default_language_version:
-//   python: python3
 //   node: 22.19.0
+//   python: python3
 // Note: Use mise.toml to manage language versions in hk
 
 local linters = new Mapping<String, Step> {
@@ -13,12 +13,12 @@ local linters = new Mapping<String, Step> {
         exclude = #"^providers/ssh/docs/connections/ssh\.rst$"#
     }
     ["end-of-file-fixer"] = (Builtins.newlines) {
-        exclude = #"(?x) ^airflow-core/docs/img/.*\.dot| ^airflow-core/docs/img/.*\.sha256| .*/dist/.*| LICENSES-ui\.txt$| .*/openapi-gen/.*"#
+        exclude = List("airflow-core/docs/img/**.dot**", "airflow-core/docs/img/**.sha256**", "****/dist/****", "**LICENSES-ui.txt", "****/openapi-gen/****")
     }
     ["mixed-line-ending"] = Builtins.mixed_line_ending
     ["check-executables-have-shebangs"] = Builtins.check_executables_have_shebangs
     ["trailing-whitespace"] = (Builtins.trailing_whitespace) {
-        exclude = #"(?x) ^airflow-core/docs/img/.*\.dot$| ^dev/breeze/doc/images/output.*$| ^.*/openapi-gen/.*$| ^airflow-ctl/docs/images/.*\.svg$"#
+        exclude = List("airflow-core/docs/img/**.dot", "dev/breeze/doc/images/output**", "**/openapi-gen/**", "airflow-ctl/docs/images/**.svg")
     }
     ["yamllint"] = (Builtins.yamllint) {
         exclude = #"(?x) ^.*airflow\.template\.yaml$| ^.*init_git_sync\.template\.yaml$| ^chart/(?:templates|files)/.*\.yaml$| ^helm-tests/tests/chart_utils/keda.sh_scaledobjects\.yaml$| .*/v1.*\.yaml$| ^.*openapi.*\.yaml$| ^\.pre-commit-config\.yaml$| ^.*reproducible_build\.yaml$| ^.*pnpm-lock\.yaml$"#
@@ -33,7 +33,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Upgrade important versions (manual)
     ["upgrade-important-versions"] {
-        glob = #"(?x) ^\.pre-commit-config\.yaml$| ^\.github/\.pre-commit-config\.yaml$| ^scripts/ci/prek/update_installers_and_prek\.py$"#
+        glob = List(".pre-commit-config.yaml", ".github/.pre-commit-config.yaml", "scripts/ci/prek/update_installers_and_prek.py")
         check = "./scripts/ci/prek/upgrade_important_versions.py"
     }
     // Name: Check translation completeness (manual)
@@ -96,7 +96,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Run 'ruff' for extremely fast Python linting
     ["ruff"] {
-        exclude = #"^airflow-core/tests/unit/dags/test_imports\.py$|^performance/tests/test_.*\.py$"#
+        exclude = List("airflow-core/tests/unit/dags/test_imports.py", "performance/tests/test_**.py")
         prefix = "mise x pipx:ruff@0.13.3 --"
         check = "ruff check --force-exclude {{files}}"
         // args from pre-commit: --fix
@@ -137,7 +137,7 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Check cncf.kubernetes imports used for executors only
     ["check-cncf-k8s-only-for-executors"] {
         glob = #"^airflow-core/src/airflow/.*\.py$"#
-        exclude = #"(?x) ^providers/.*/src/airflow/providers/| ^airflow-core/src/airflow/exceptions\.py$| ^airflow-core/src/airflow/models/renderedtifields\.py$| ^airflow-core/src/airflow/serialization/serialized_objects\.py$| ^airflow-core/src/airflow/serialization/serializers/kubernetes\.py$| ^airflow-core/src/airflow/utils/sqlalchemy\.py$"#
+        exclude = List("providers/**/src/airflow/providers/**", "airflow-core/src/airflow/exceptions.py", "airflow-core/src/airflow/models/renderedtifields.py", "airflow-core/src/airflow/serialization/serialized_objects.py", "airflow-core/src/airflow/serialization/serializers/kubernetes.py", "airflow-core/src/airflow/utils/sqlalchemy.py")
         check = #"./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.providers\.cncf\.kubernetes' --message "Only few k8s executors exceptions are allowed to use `airflow.providers.cncf.kubernetes`." {{files}}"#
     }
     // Name: Update mounts in the local yml file
@@ -172,7 +172,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Prevent deprecated sqlalchemy usage
     ["prevent-deprecated-sqlalchemy-usage"] {
-        glob = #"(?x) ^airflow-ctl.*\.py$| ^airflow-core/src/airflow/models/.*\.py$| ^providers/fab/.*\.py$| ^task_sdk.*\.py$"#
+        glob = List("airflow-ctl**.py", "airflow-core/src/airflow/models/**.py", "providers/fab/**.py", "task_sdk**.py")
         check = "./scripts/ci/prek/prevent_deprecated_sqlalchemy_usage.py {{files}}"
     }
     // Name: Updates supported versions in documentation
@@ -182,12 +182,12 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Check that the REVISION_HEADS_MAP is up-to-date
     ["check-revision-heads-map"] {
-        glob = #"(?x) ^scripts/ci/prek/version_heads_map\.py$| ^airflow-core/src/airflow/migrations/versions/.*$|^airflow-core/src/airflow/migrations/versions| ^providers/fab/src/airflow/providers/fab/migrations/versions/.*$|^providers/fab/src/airflow/providers/fab/migrations/versions| ^airflow-core/src/airflow/utils/db\.py$| ^providers/fab/src/airflow/providers/fab/auth_manager/models/db\.py$"#
+        glob = List("scripts/ci/prek/version_heads_map.py", "airflow-core/src/airflow/migrations/versions/**", "airflow-core/src/airflow/migrations/versions**", "providers/fab/src/airflow/providers/fab/migrations/versions/**", "providers/fab/src/airflow/providers/fab/migrations/versions**", "airflow-core/src/airflow/utils/db.py", "providers/fab/src/airflow/providers/fab/auth_manager/models/db.py")
         check = "./scripts/ci/prek/check_revision_heads_map.py"
     }
     // Name: Update versions in docs
     ["update-version"] {
-        glob = #"^docs|^airflow-core/src/airflow/__init__\.py$|.*/pyproject\.toml$"#
+        glob = List("docs**", "airflow-core/src/airflow/__init__.py", "****/pyproject.toml")
         check = "./scripts/ci/prek/update_versions.py"
     }
     // Name: Check for pydevd debug statements accidentally left
@@ -197,7 +197,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Check pytest.mark.db_test use in providers
     ["check-pytest-mark-db-test-in-providers"] {
-        glob = #"(?x) ^providers/airbyte/.*\.py$| ^providers/apache/beam/.*\.py$| ^providers/apache/flink/.*\.py$| ^providers/apache/iceberg/.*\.py$| ^providers/apache/kafka/.*\.py$| ^providers/apprise/.*\.py$| ^providers/arangodb/.*\.py$| ^providers/asana/.*\.py$| ^providers/atlassian/jira/.*\.py$| ^providers/cloudant/.*\.py$| ^providers/cohere/.*\.py$| ^providers/common/compat/.*\.py$| ^providers/common/messaging/.*\.py$| ^providers/datadog/.*\.py$| ^providers/dingding/.*\.py$| ^providers/discord/.*\.py$| ^providers/exasol/.*\.py$| ^providers/facebook/.*\.py$| ^providers/ftp/.*\.py$| ^providers/grpc/.*\.py$| ^providers/hashicorp/.*\.py$| ^providers/imap/.*\.py$| ^providers/influxdb/.*\.py$| ^providers/jdbc/.*\.py$| ^providers/jenkins/.*\.py$| ^providers/mongo/.*\.py$| ^providers/microsoft/psrp/.*\.py$| ^providers/microsoft/winrm/.*\.py$| ^providers/neo4j/.*\.py$| ^providers/odbc/.*\.py$| ^providers/openai/.*\.py$| ^providers/openfaas/.*\.py$| ^providers/opsgenie/.*\.py$| ^providers/oracle/.*\.py$| ^providers/pagerduty/.*\.py$| ^providers/pgvector/.*\.py$| ^providers/pinecone/.*\.py$| ^providers/postgres/.*\.py$| ^providers/presto/.*\.py$| ^providers/segment/.*\.py$| ^providers/sendgrid/.*\.py$| ^providers/singularity/.*\.py$| ^providers/slack/.*\.py$| ^providers/smtp/.*\.py$| ^providers/tableau/.*\.py$| ^providers/teradata/.*\.py$| ^providers/trino/.*\.py$| ^providers/vertica/.*\.py$| ^providers/yandex/.*\.py$| ^providers/zendesk/.*\.py$"#
+        glob = List("providers/airbyte/**.py", "providers/apache/beam/**.py", "providers/apache/flink/**.py", "providers/apache/iceberg/**.py", "providers/apache/kafka/**.py", "providers/apprise/**.py", "providers/arangodb/**.py", "providers/asana/**.py", "providers/atlassian/jira/**.py", "providers/cloudant/**.py", "providers/cohere/**.py", "providers/common/compat/**.py", "providers/common/messaging/**.py", "providers/datadog/**.py", "providers/dingding/**.py", "providers/discord/**.py", "providers/exasol/**.py", "providers/facebook/**.py", "providers/ftp/**.py", "providers/grpc/**.py", "providers/hashicorp/**.py", "providers/imap/**.py", "providers/influxdb/**.py", "providers/jdbc/**.py", "providers/jenkins/**.py", "providers/mongo/**.py", "providers/microsoft/psrp/**.py", "providers/microsoft/winrm/**.py", "providers/neo4j/**.py", "providers/odbc/**.py", "providers/openai/**.py", "providers/openfaas/**.py", "providers/opsgenie/**.py", "providers/oracle/**.py", "providers/pagerduty/**.py", "providers/pgvector/**.py", "providers/pinecone/**.py", "providers/postgres/**.py", "providers/presto/**.py", "providers/segment/**.py", "providers/sendgrid/**.py", "providers/singularity/**.py", "providers/slack/**.py", "providers/smtp/**.py", "providers/tableau/**.py", "providers/teradata/**.py", "providers/trino/**.py", "providers/vertica/**.py", "providers/yandex/**.py", "providers/zendesk/**.py")
         check = #"pytest\.mark\.db_test {{files}}"#
     }
     // Name: Verify no hard-coded version in example dags
@@ -260,14 +260,14 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Check BaseOperator core imports
     ["check-base-operator-usage"] {
         glob = #"\.py$"#
-        exclude = "(?x) ^airflow-core/src/airflow/decorators/.*$| ^airflow-core/src/airflow/hooks/.*$| ^airflow-core/src/airflow/operators/.*$| ^providers/.*$"
+        exclude = List("airflow-core/src/airflow/decorators/**", "airflow-core/src/airflow/hooks/**", "airflow-core/src/airflow/operators/**", "providers/**")
         check = #"from airflow\.models import.* BaseOperator\b {{files}}"#
     }
     // Original ID: check-base-operator-usage
     // Name: Check BaseOperatorLink core imports
     ["check-base-operator-usage-2"] {
         glob = #"\.py$"#
-        exclude = "(?x) ^airflow-core/src/airflow/decorators/.*$| ^airflow-core/src/airflow/hooks/.*$| ^airflow-core/src/airflow/operators/.*$| ^providers/.*/src/airflow/providers/.*$| ^providers/.*/src/airflow/providers/standard/sensors/.*$"
+        exclude = List("airflow-core/src/airflow/decorators/**", "airflow-core/src/airflow/hooks/**", "airflow-core/src/airflow/operators/**", "providers/**/src/airflow/providers/**", "providers/**/src/airflow/providers/standard/sensors/**")
         check = #"^\s*from airflow\.models\.baseoperatorlink import BaseOperatorLink\b {{files}}"#
     }
     // Original ID: check-base-operator-usage
@@ -291,7 +291,7 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Verify usage of Airflow deprecation classes in core
     ["check-core-deprecation-classes"] {
         glob = #"\.py$"#
-        exclude = #"^airflow-core/src/airflow/configuration\.py$|^airflow-core/tests/.*$|^providers/.*/src/airflow/providers/|^scripts/in_container/verify_providers\.py$|^providers/.*/tests/.*$|^devel-common/"#
+        exclude = List("airflow-core/src/airflow/configuration.py", "airflow-core/tests/**", "providers/**/src/airflow/providers/**", "scripts/in_container/verify_providers.py", "providers/**/tests/**", "devel-common/**")
         check = "category=DeprecationWarning|category=PendingDeprecationWarning {{files}}"
     }
     // Name: Check session util imports
@@ -330,7 +330,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Sort and uniquify installed_providers.txt
     ["update-installed-providers-to-be-sorted"] {
-        glob = #"^\.pre-commit-config\.yaml$|^.*_installed_providers\.txt$"#
+        glob = List(".pre-commit-config.yaml", "**_installed_providers.txt")
         check = "./scripts/ci/prek/sort_installed_providers.py"
     }
     // Name: Sort spelling_wordlist.txt
@@ -361,7 +361,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Compile ui assets (manual)
     ["compile-ui-assets"] {
-        glob = "^airflow-core/src/airflow/ui/|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/"
+        glob = List("airflow-core/src/airflow/ui/**", "airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/**")
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/compile_ui_assets.py"
     }
@@ -379,7 +379,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Compile ui assets in dev mode (manual)
     ["compile-ui-assets-dev"] {
-        glob = "^airflow-core/src/airflow/ui/|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/"
+        glob = List("airflow-core/src/airflow/ui/**", "airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/**")
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/compile_ui_assets_dev.py"
     }
@@ -390,7 +390,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Sync integrations list with docs
     ["check-integrations-list-consistent"] {
-        glob = #"^scripts/ci/docker-compose/integration-.*\.yml$|^contributing-docs/testing/integration_tests\.rst$"#
+        glob = List("scripts/ci/docker-compose/integration-**.yml", "contributing-docs/testing/integration_tests.rst")
         check = "./scripts/ci/prek/check_integrations_list.py"
     }
     // Name: Update Breeze README.md with config files hash
@@ -400,7 +400,7 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Update Airflow's meta-package pyproject.toml
     ["update-pyproject-toml"] {
-        glob = #"(?x) ^.*/pyproject\.toml$| ^scripts/ci/prek/update_airflow_pyproject_toml\.py$| ^providers/.*/pyproject\.toml$| ^providers/.*/provider\.yaml$"#
+        glob = List("**/pyproject.toml", "scripts/ci/prek/update_airflow_pyproject_toml.py", "providers/**/pyproject.toml", "providers/**/provider.yaml")
         check = "./scripts/ci/prek/update_airflow_pyproject_toml.py"
     }
     // Name: Update Source Date Epoch for reproducible builds
@@ -518,7 +518,7 @@ track and have security implications. Please remove the zip file from the reposi
     }
     // Name: Inline Dockerfile and Dockerfile.ci scripts
     ["update-inlined-dockerfile-scripts"] {
-        glob = #"^Dockerfile$|^Dockerfile\.ci$|^scripts/docker/.*$"#
+        glob = List("Dockerfile", "Dockerfile.ci", "scripts/docker/**")
         check = "./scripts/ci/prek/inline_scripts_in_docker.py"
     }
     // Name: Check changelogs for duplicate entries
@@ -545,7 +545,7 @@ track and have security implications. Please remove the zip file from the reposi
     }
     // Name: Update breeze docs
     ["update-breeze-cmd-output"] {
-        glob = #"(?x) ^dev/breeze/.*$| ^\.pre-commit-config\.yaml$| ^scripts/ci/prek/breeze_cmd_line\.py$| ^generated/provider_dependencies\.json$"#
+        glob = List("dev/breeze/**", ".pre-commit-config.yaml", "scripts/ci/prek/breeze_cmd_line.py", "generated/provider_dependencies.json")
         check = "./scripts/ci/prek/breeze_cmd_line.py"
     }
     // Name: Check that example dags url include provider versions
@@ -576,7 +576,7 @@ track and have security implications. Please remove the zip file from the reposi
     }
     // Name: Validate provider doc files
     ["check-provider-docs-valid"] {
-        glob = #"^providers/.*/provider\.yaml$|^.*/docs/.*"#
+        glob = List("providers/**/provider.yaml", "**/docs/****")
         check = "./scripts/ci/prek/check_provider_docs.py"
     }
     // Name: bandit
@@ -655,7 +655,7 @@ track and have security implications. Please remove the zip file from the reposi
     }
     // Name: Run mypy for dev
     ["mypy-dev"] {
-        glob = #"^dev/.*\.py$|^scripts/.*\.py$"#
+        glob = List("dev/**.py", "scripts/**.py")
         check = "./scripts/ci/prek/mypy.py {{files}}"
     }
     // Original ID: mypy-dev
@@ -710,7 +710,7 @@ track and have security implications. Please remove the zip file from the reposi
     }
     // Name: Run mypy for airflow-ctl
     ["mypy-airflow-ctl"] {
-        glob = #"^airflow-ctl/src/airflowctl/.*\.py$|^airflow-ctl/tests/.*\.py$"#
+        glob = List("airflow-ctl/src/airflowctl/**.py", "airflow-ctl/tests/**.py")
         exclude = ".*generated.py"
         check = "./scripts/ci/prek/mypy.py {{files}}"
     }
@@ -722,7 +722,7 @@ track and have security implications. Please remove the zip file from the reposi
     }
     // Name: Generate the FastAPI API spec
     ["generate-openapi-spec"] {
-        glob = #"^airflow-core/src/airflow/api_fastapi/.*\.py$|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/.*\.py$|^providers/fab/src/airflow/providers/fab/auth_manager/api_fastapi/.*\.py$"#
+        glob = List("airflow-core/src/airflow/api_fastapi/**.py", "airflow-core/src/airflow/api_fastapi/auth/managers/simple/**.py", "providers/fab/src/airflow/providers/fab/auth_manager/api_fastapi/**.py")
         exclude = "^airflow-core/src/airflow/api_fastapi/execution_api/.*"
         check = "./scripts/ci/prek/generate_openapi_spec.py"
     }
@@ -759,7 +759,7 @@ track and have security implications. Please remove the zip file from the reposi
     }
     // Name: Update migration ref doc
     ["update-migration-references"] {
-        glob = #"^airflow-core/src/airflow/migrations/versions/.*\.py$|^airflow-core/docs/migrations-ref\.rst$"#
+        glob = List("airflow-core/src/airflow/migrations/versions/**.py", "airflow-core/docs/migrations-ref.rst")
         check = "./scripts/ci/prek/migration_reference.py"
     }
     // Name: Generate Datamodels for TaskSDK client
@@ -777,7 +777,7 @@ bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --proje
     }
     // Name: Update ER diagram
     ["update-er-diagram"] {
-        glob = #"^airflow-core/src/airflow/migrations/versions/.*\.py$|^airflow-core/docs/migrations-ref\.rst$"#
+        glob = List("airflow-core/src/airflow/migrations/versions/**.py", "airflow-core/docs/migrations-ref.rst")
         check = "./scripts/ci/prek/update_er_diagram.py"
     }
     // Name: Check the default configuration
@@ -803,7 +803,7 @@ bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --proje
     // Name: No AIRFLOW_V_* imports in airflow-core
     ["check-airflow-version-checks-in-core"] {
         glob = #"^airflow-core/.*\.py$"#
-        exclude = #"(?x) ^airflow-core/tests/integration/otel/dags/otel_test_dag_with_pause_between_tasks\.py$| ^airflow-core/tests/integration/otel/dags/otel_test_dag_with_pause_in_task\.py$| ^airflow-core/tests/integration/otel/test_otel\.py$| ^airflow-core/tests/unit/core/test_configuration\.py$| ^airflow-core/tests/unit/models/test_renderedtifields\.py$| ^airflow-core/tests/unit/models/test_variable\.py$"#
+        exclude = List("airflow-core/tests/integration/otel/dags/otel_test_dag_with_pause_between_tasks.py", "airflow-core/tests/integration/otel/dags/otel_test_dag_with_pause_in_task.py", "airflow-core/tests/integration/otel/test_otel.py", "airflow-core/tests/unit/core/test_configuration.py", "airflow-core/tests/unit/models/test_renderedtifields.py", "airflow-core/tests/unit/models/test_variable.py")
         check = "import AIRFLOW_V_ {{files}}"
     }
     // Name: Check for SDK imports in core files
@@ -942,7 +942,7 @@ local custom_steps = new Mapping<String, Step> {
     // Original ID: insert-license
     // Name: Add license for all RST files
     ["insert-license-2"] {
-        exclude = #"^\.github/.*$|newsfragments/.*\.rst$"#
+        exclude = List(".github/**", "**newsfragments/**.rst")
         // files: \.rst$
         // TODO: Configure check and/or fix commands
         // check = "..."
@@ -953,7 +953,7 @@ local custom_steps = new Mapping<String, Step> {
     // Original ID: insert-license
     // Name: Add license for CSS/JS/JSX/PUML/TS/TSX
     ["insert-license-3"] {
-        exclude = #"^\.github/.*$|ui/openapi-gen/|www/openapi-gen/|.*/dist/.*"#
+        exclude = List(".github/**", "**ui/openapi-gen/**", "**www/openapi-gen/**", "****/dist/****")
         // files: \.(css|jsx?|puml|tsx?)$
         // TODO: Configure check and/or fix commands
         // check = "..."
@@ -964,7 +964,7 @@ local custom_steps = new Mapping<String, Step> {
     // Original ID: insert-license
     // Name: Add license for all Shell files
     ["insert-license-4"] {
-        exclude = #"^\.github/.*$|^dev/breeze/autocomplete/.*$"#
+        exclude = List(".github/**", "dev/breeze/autocomplete/**")
         // files: \.bash$|\.sh$
         // TODO: Configure check and/or fix commands
         // check = "..."
@@ -975,7 +975,7 @@ local custom_steps = new Mapping<String, Step> {
     // Original ID: insert-license
     // Name: Add license for all toml files
     ["insert-license-5"] {
-        exclude = #"^\.github/.*$|^dev/breeze/autocomplete/.*$"#
+        exclude = List(".github/**", "dev/breeze/autocomplete/**")
         // files: \.toml$
         // TODO: Configure check and/or fix commands
         // check = "..."
@@ -986,7 +986,7 @@ local custom_steps = new Mapping<String, Step> {
     // Original ID: insert-license
     // Name: Add license for all Python files
     ["insert-license-6"] {
-        exclude = #"^\.github/.*$|^.*/_vendor/.*$|^airflow-ctl/.*/.*generated\.py$"#
+        exclude = List(".github/**", "**/_vendor/**", "airflow-ctl/**/**generated.py")
         // files: \.py$|\.pyi$
         // TODO: Configure check and/or fix commands
         // check = "..."
@@ -1018,7 +1018,7 @@ local custom_steps = new Mapping<String, Step> {
     // Original ID: insert-license
     // Name: Add license for all YAML files except Helm templates
     ["insert-license-9"] {
-        exclude = #"(?x) ^\.github/.*$|^chart/templates/.*| .*reproducible_build\.yaml$| ^.*/v2.*\.yaml$| ^.*/openapi/_private_ui.*\.yaml$| ^.*/pnpm-lock\.yaml$| .*-generated\.yaml$"#
+        exclude = List(".github/**", "chart/templates/****", "****reproducible_build.yaml", "**/v2**.yaml", "**/openapi/_private_ui**.yaml", "**/pnpm-lock.yaml", "****-generated.yaml")
         // files: \.ya?ml$
         // File type filtering needed
         // TODO: Configure check and/or fix commands
