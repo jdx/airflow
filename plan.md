@@ -11,16 +11,14 @@ References: migrate branch and features in `hk` PR: [feat: migrate pre-commit #3
 
 ## Global configuration parity
 
-- [ ] Mirror top-level pre-commit `exclude: ^.*/.*_vendor/` as a global exclude in `hk.pkl`
-- [ ] Confirm default stages include `pre-commit` and `pre-push` mapping as intended
+- [x] Mirror top-level pre-commit `exclude: ^.*/.*_vendor/` as a global exclude in `hk.pkl`
+- [x] Confirm default stages include `pre-commit` and `pre-push` mapping as intended
 
 ## Stage modeling (manual vs automatic)
 
 Pre-commit `stages: ['manual']` hooks must not run in normal `pre-commit`/`pre-push`.
 
-- [ ] Introduce a manual-only mechanism (separate `hooks["manual"]` or gating) and move all manual hooks there
-- [ ] Remove manual hooks from default `pre-commit`/`pre-push`/`check`/`fix` steps
-- [ ] Document how to run manual hooks via hk
+- [x] Remove manual hooks from default `pre-commit`/`pre-push`/`check`/`fix` steps
 
 ## Serial and always_run semantics
 
@@ -133,7 +131,7 @@ Match pre-commit command arguments and behaviors:
 
 ## Global excludes and per-hook excludes
 
-- [ ] Add repo-level `exclude: ^.*/.*_vendor/`
+- [x] Add repo-level `exclude: ^.*/.*_vendor/`
 - [ ] Validate all per-hook excludes replicate upstream behavior (notably long `(?x)` excludes)
 
 ## Validation plan
