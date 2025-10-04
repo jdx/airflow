@@ -363,7 +363,7 @@ local local_hooks = new Mapping<String, Step> {
     ["shellcheck"] {
         glob = Types.Regex(#"\.(bash|sh)$|^hooks/build$|^hooks/push$"#)
         exclude = Types.Regex("^dev/breeze/autocomplete/.*$")
-        check = "koalaman/shellcheck:v0.8.0 -x -a {{files}}"
+        check = "docker run --rm -v $(pwd):/src -w /src koalaman/shellcheck:v0.8.0 -x -a {{files}}"
     }
     // Name: Compile FAB provider assets
     ["compile-fab-assets"] {
@@ -1184,16 +1184,16 @@ local manual_steps = new Mapping<String, Step> {
 }
 
 hooks {
-    ["pre-commit"] {
-        fix = true
-        stash = "git"
+    ["pre-push"] {
         steps {
             ...linters
             ...local_hooks
             ...custom_steps
         }
     }
-    ["pre-push"] {
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
         steps {
             ...linters
             ...local_hooks
