@@ -6,7 +6,7 @@ import "../hk/pkl/Builtins.pkl"
 //   node: 22.19.0
 // 
 // To set these versions with mise, run:
-//   mise use python@python3
+//   mise use python@3
 //   mise use node@22.19.0
 
 local linters = new Mapping<String, Step> {
