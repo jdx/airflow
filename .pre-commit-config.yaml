@@ -20,7 +20,7 @@ default_language_version:
   python: python3
   node: 22.19.0
 minimum_prek_version: '0.2.0'
-exclude: ^.*/.*_vendor/
+exclude: ^.*/.*_vendor/|hk.pkl
 repos:
   - repo: meta
     hooks:
