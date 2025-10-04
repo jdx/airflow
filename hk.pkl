@@ -85,7 +85,16 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Update providers build files
     ["update-providers-build-files"] {
-        glob = #"(?x)^providers/[^\/]*/src/airflow/providers/[^\/]*/__init__\.py$|^providers/[^\/]*/[^\/]*/src/airflow/providers/[^\/]*/[^\/]*/__init__\.py$|^providers/.*/pyproject\.toml$|^providers/.*/provider\.yaml$|^airflow_breeze/templates/PROVIDER__INIT__PY_TEMPLATE\.py\.jinja2$|^airflow_breeze/templates/get_provider_info_TEMPLATE\.py\.jinja2$|^airflow_breeze/templates/PROVIDER_README_TEMPLATE\.rst\.jinja2$"#
+        glob = #"""
+(?x)
+^providers/[^\/]*/src/airflow/providers/[^\/]*/__init__\.py$|
+^providers/[^\/]*/[^\/]*/src/airflow/providers/[^\/]*/[^\/]*/__init__\.py$|
+^providers/.*/pyproject\.toml$|
+^providers/.*/provider\.yaml$|
+^airflow_breeze/templates/PROVIDER__INIT__PY_TEMPLATE\.py\.jinja2$|
+^airflow_breeze/templates/get_provider_info_TEMPLATE\.py\.jinja2$|
+^airflow_breeze/templates/PROVIDER_README_TEMPLATE\.rst\.jinja2$
+"""#
         check = "./scripts/ci/prek/update_providers_build_files.py {{files}}"
     }
     // Name: Check AIRFLOW_V imports in tests
@@ -209,7 +218,10 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Verify no hard-coded version in example dags
     ["check-links-to-example-dags-do-not-use-hardcoded-versions"] {
         glob = #"^providers/.*/docs/.*\.rst"#
-        check = "(?i) .*https://github.*/main/providers/.*/src/airflow/providers/.*/example_dags/| .*https://github.*/master/providers/.*/src/airflow/providers/.*/example_dags/ {{files}}"
+        check = """
+(?i) .*https://github.*/main/providers/.*/src/airflow/providers/.*/example_dags/| .*https://github.*/master/providers/.*/src/airflow/providers/.*/example_dags/
+ {{files}}
+"""
     }
     // Name: Don't use safe in templates
     ["check-safe-filter-usage-in-html"] {
@@ -240,7 +252,10 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Check for language that we do not accept as community
     ["check-for-inclusive-language"] {
         exclude = #"(?x) ^airflow-core/src/airflow/ui/src/i18n/config\.ts$| ^airflow-core/src/airflow/ui/openapi-gen/| ^airflow-core/src/airflow/ui/public/i18n/locales/de/README\.md$| ^airflow-core/src/airflow/cli/commands/local_commands/fastapi_api_command\.py$| ^airflow-core/src/airflow/config_templates/| ^airflow-core/src/airflow/models/baseoperator\.py$| ^airflow-core/src/airflow/operators/__init__\.py$| ^providers/common/sql/tests/provider_tests/common/sql/operators/test_sql_execute\.py$| ^providers/amazon/src/airflow/providers/amazon/aws/hooks/emr\.py$| ^providers/amazon/src/airflow/providers/amazon/aws/operators/emr\.py$| ^providers/apache/cassandra/src/airflow/providers/apache/cassandra/hooks/cassandra\.py$| ^providers/apache/hive/src/airflow/providers/apache/hive/operators/hive_stats\.py$| ^providers/apache/hive/src/airflow/providers/apache/hive/transfers/vertica_to_hive\.py$| ^providers/apache/spark/src/airflow/providers/apache/spark/decorators/| ^providers/apache/spark/src/airflow/providers/apache/spark/hooks/| ^providers/apache/spark/src/airflow/providers/apache/spark/operators/| ^providers/exasol/src/airflow/providers/exasol/hooks/exasol\.py$| ^providers/fab/src/airflow/providers/fab/auth_manager/security_manager/| ^providers/fab/src/airflow/providers/fab/www/static/| ^providers/fab/src/airflow/providers/fab/www/templates/| ^providers/google/src/airflow/providers/google/cloud/hooks/bigquery\.py$| ^providers/google/src/airflow/providers/google/cloud/operators/cloud_build\.py$| ^providers/google/src/airflow/providers/google/cloud/operators/dataproc\.py$| ^providers/google/src/airflow/providers/google/cloud/operators/mlengine\.py$| ^providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/definition.py| ^providers/microsoft/azure/src/airflow/providers/microsoft/azure/hooks/cosmos\.py$| ^providers/microsoft/winrm/src/airflow/providers/microsoft/winrm/hooks/winrm\.py$| ^airflow-core/docs/.*commits\.rst$| ^providers/microsoft/winrm/src/airflow/providers/microsoft/winrm/operators/winrm\.py$| ^providers/opsgenie/src/airflow/providers/opsgenie/hooks/opsgenie\.py$| ^providers/redis/src/airflow/providers/redis/provider\.yaml$| ^airflow-core/src/airflow/serialization/serialized_objects\.py$| ^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/pnpm-lock\.yaml$| ^airflow-core/src/airflow/ui/pnpm-lock\.yaml$| ^airflow-core/src/airflow/utils/db\.py$| ^airflow-core/src/airflow/utils/trigger_rule\.py$| ^chart/values.schema\.json$| ^helm-tests/tests/chart_utils/helm_template_generator\.py$| ^helm-tests/tests/chart_utils/ingress-networking-v1beta1\.json$| ^dev/| ^devel-common/src/docs/README\.rst$| ^docs/apache-airflow-providers-amazon/secrets-backends/aws-ssm-parameter-store\.rst$| ^providers/apache/kafka/docs/connections/kafka\.rst$| ^providers/apache/hdfs/docs/connections\.rst$| ^providers/apache/spark/docs/decorators/pyspark\.rst$| ^providers/microsoft/azure/docs/connections/azure_cosmos\.rst$| ^providers/fab/docs/auth-manager/webserver-authentication\.rst$| ^providers/google/docs/operators/cloud/kubernetes_engine\.rst$| ^providers/cncf/kubernetes/docs/operators\.rst$| ^.*/conf\.py$| ^.*/conf_constants\.py$| ^.*/provider_conf\.py$| ^devel-common/src/sphinx_exts/removemarktransform\.py| ^devel-common/src/tests_common/test_utils/db\.py| ^airflow-core/newsfragments/41761.significant\.rst$| ^scripts/ci/prek/vendor_k8s_json_schema\.py$| ^scripts/ci/docker-compose/integration-keycloak\.yml$| ^scripts/ci/docker-compose/keycloak/keycloak-entrypoint\.sh$| ^airflow-core/tests/| ^providers/.*/tests/| ^\.pre-commit-config\.yaml$| ^.*CHANGELOG\.(rst|txt)$| ^.*changelog\.(rst|txt)$| ^.*commits\.(rst|txt)$| ^.*RELEASE_NOTES\.rst$| ^contributing-docs/03_contributors_quick_start\.rst$| ^.*\.(png|gif|jp[e]?g|svg|tgz|lock)$| git| ^airflow-core/newsfragments/43349\.significant\.rst$| ^airflow-core/newsfragments/41368\.significant\.rst$| .*/dist/.*| package-lock\.json$| ^providers/edge3/src/airflow/providers/edge3/plugins/www/pnpm-lock.yaml$"#
-        check = #"(?ix) (black|white)[_-]?list| \bshe\b| \bhe\b| \bher\b| \bhis\b| \bmaster\b| \bslave\b| \bsanity\b| \bdummy\b{{files}}"#
+        check = #"""
+(?ix) (black|white)[_-]?list| \bshe\b| \bhe\b| \bher\b| \bhis\b| \bmaster\b| \bslave\b| \bsanity\b| \bdummy\b
+ {{files}}
+"""#
     }
     // Name: Check BaseOperator and partial() arguments
     ["check-base-operator-partial-arguments"] {
@@ -522,7 +537,11 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Check no zip files are committed
     ["check-zip-file-is-not-committed"] {
         glob = #"\.zip$"#
-        check = "Zip files are not allowed in the repository as they are hard to track and have security implications. Please remove the zip file from the repository. {{files}}"
+        check = """
+Zip files are not allowed in the repository as they are hard to
+track and have security implications. Please remove the zip file from the repository.
+ {{files}}
+"""
     }
     // Name: Check deprecations categories in decorators
     ["check-code-deprecations"] {
@@ -625,26 +644,55 @@ local local_hooks = new Mapping<String, Step> {
     ["check-fab-migrations"] {
         glob = #"^airflow-core/src/airflow/migrations/versions/.*\.py$"#
         exclude = "^airflow-core/src/airflow/migrations/versions/0028_3_0_0_drop_ab_user_id_foreign_key.py$"
-        check = #"(?ix) \bab_permission\b| \bab_view_menu\b| \bab_role\b| \bab_permission_view\b| \bab_permission_view_role\b| \bab_user\b| \bab_user_role\b| \bab_register_user\b{{files}}"#
+        check = #"""
+(?ix) \bab_permission\b| \bab_view_menu\b| \bab_role\b| \bab_permission_view\b| \bab_permission_view_role\b| \bab_user\b| \bab_user_role\b| \bab_register_user\b
+ {{files}}
+"""#
     }
     // Name: Compile / format / lint UI
     ["ts-compile-lint-ui"] {
-        glob = #"(?x)^airflow-core/src/airflow/ui/.*\.(js|ts|tsx|yaml|css|json)$|^airflow-core/src/airflow/api_fastapi/core_api/openapi/.*\.yaml$|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/v1.*\.yaml$"#
-        exclude = "(?x) ^airflow-core/src/airflow/ui/node-modules/.*| ^airflow-core/src/airflow/ui/.pnpm-store"
+        glob = #"""
+(?x)
+^airflow-core/src/airflow/ui/.*\.(js|ts|tsx|yaml|css|json)$|
+^airflow-core/src/airflow/api_fastapi/core_api/openapi/.*\.yaml$|
+^airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/v1.*\.yaml$
+"""#
+        exclude = """
+(?x)
+^airflow-core/src/airflow/ui/node-modules/.*|
+^airflow-core/src/airflow/ui/.pnpm-store
+"""
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/ts_compile_lint_ui.py {{files}}"
     }
     // Name: Compile / format / lint simple auth manager UI
     ["ts-compile-lint-simple-auth-manager-ui"] {
-        glob = #"(?x)^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/.*\.(js|ts|tsx|yaml|css|json)$|^airflow-core/src/airflow/api_fastapi/core_api/openapi/.*\.yaml$|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/.*\.yaml$"#
-        exclude = "(?x) ^airflow-core/src/airflow/api_fastapi/node-modules/.*| ^airflow-core/src/airflow/api_fastapi/.pnpm-store"
+        glob = #"""
+(?x)
+^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/.*\.(js|ts|tsx|yaml|css|json)$|
+^airflow-core/src/airflow/api_fastapi/core_api/openapi/.*\.yaml$|
+^airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/.*\.yaml$
+"""#
+        exclude = """
+(?x)
+^airflow-core/src/airflow/api_fastapi/node-modules/.*|
+^airflow-core/src/airflow/api_fastapi/.pnpm-store
+"""
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/ts_compile_lint_simple_auth_manager_ui.py {{files}}"
     }
     // Name: Compile / format / lint edge UI
     ["ts-compile-lint-edge-ui"] {
-        glob = #"(?x)^providers/edge3/src/airflow/providers/edge3/plugins/www/.*\.(js|ts|tsx|yaml|css|json)$|^providers/edge3/src/airflow/providers/edge3/openapi/v2-edge-generated.yaml$"#
-        exclude = "(?x) ^providers/edge3/src/airflow/providers/edge3/plugins/www/node-modules/.*| ^providers/edge3/src/airflow/providers/edge3/plugins/www/.pnpm-store"
+        glob = #"""
+(?x)
+^providers/edge3/src/airflow/providers/edge3/plugins/www/.*\.(js|ts|tsx|yaml|css|json)$|
+^providers/edge3/src/airflow/providers/edge3/openapi/v2-edge-generated.yaml$
+"""#
+        exclude = """
+(?x)
+^providers/edge3/src/airflow/providers/edge3/plugins/www/node-modules/.*|
+^providers/edge3/src/airflow/providers/edge3/plugins/www/.pnpm-store
+"""
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/ts_compile_lint_edge.py {{files}}"
     }
@@ -778,7 +826,10 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Generate Datamodels for AirflowCTL
     ["generate-airflowctl-datamodels"] {
         glob = #"^airflow-core/src/airflow/api_fastapi/core_api/datamodels/.*\.py$|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/(datamodels|routes|services|openapi)/.*\.py$"#
-        check = #"bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --project apache-airflow-ctl --directory airflow-ctl/ datamodel-codegen &&uv run -p 3.12 --no-dev --no-progress --active --group codegen --project apache-airflow-ctl --directory airflow-ctl/ datamodel-codegen --input="../airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/v2-simple-auth-manager-generated.yaml" --output="src/airflowctl/api/datamodels/auth_generated.py"'"#
+        check = #"""
+bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --project apache-airflow-ctl --directory airflow-ctl/ datamodel-codegen &&
+ uv run -p 3.12 --no-dev --no-progress --active --group codegen --project apache-airflow-ctl --directory airflow-ctl/ datamodel-codegen --input="../airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/v2-simple-auth-manager-generated.yaml" --output="src/airflowctl/api/datamodels/auth_generated.py"'
+"""#
         // pass_filenames was false in pre-commit
     }
     // Name: Update ER diagram
@@ -818,7 +869,98 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Check for SDK imports in core files
     ["check-sdk-imports"] {
         glob = "^airflow-core/src/airflow/"
-        exclude = #"(?x)# Allow SDK imports in these legitimate locations^airflow-core/src/airflow/example_dags/.*\.py$|# TODO: These files need to be refactored to remove SDK coupling^airflow-core/src/airflow/__init__\.py$|^airflow-core/src/airflow/api/common/mark_tasks\.py$|^airflow-core/src/airflow/api_fastapi/core_api/datamodels/assets\.py$|^airflow-core/src/airflow/api_fastapi/core_api/datamodels/connections\.py$|^airflow-core/src/airflow/api_fastapi/core_api/datamodels/hitl\.py$|^airflow-core/src/airflow/api_fastapi/core_api/datamodels/variables\.py$|^airflow-core/src/airflow/api_fastapi/core_api/routes/ui/grid\.py$|^airflow-core/src/airflow/api_fastapi/core_api/routes/ui/structure\.py$|^airflow-core/src/airflow/api_fastapi/core_api/services/public/connections\.py$|^airflow-core/src/airflow/api_fastapi/core_api/services/ui/connections\.py$|^airflow-core/src/airflow/api_fastapi/core_api/services/ui/grid\.py$|^airflow-core/src/airflow/api_fastapi/core_api/services/ui/task_group.py$|^airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl\.py$|^airflow-core/src/airflow/api_fastapi/execution_api/routes/task_instances\.py$|^airflow-core/src/airflow/api_fastapi/logging/decorators\.py$|^airflow-core/src/airflow/assets/evaluation\.py$|^airflow-core/src/airflow/assets/manager\.py$|^airflow-core/src/airflow/cli/commands/connection_command\.py$|^airflow-core/src/airflow/cli/commands/task_command\.py$|^airflow-core/src/airflow/cli/commands/triggerer_command.py$|^airflow-core/src/airflow/configuration\.py$|^airflow-core/src/airflow/dag_processing/collection\.py$|^airflow-core/src/airflow/dag_processing/manager\.py$|^airflow-core/src/airflow/dag_processing/processor\.py$|^airflow-core/src/airflow/dag_processing/dagbag\.py$|^airflow-core/src/airflow/datasets/metadata\.py$|^airflow-core/src/airflow/exceptions\.py$|^airflow-core/src/airflow/executors/local_executor\.py$|^airflow-core/src/airflow/jobs/triggerer_job_runner\.py$|^airflow-core/src/airflow/lineage/hook\.py$|^airflow-core/src/airflow/listeners/spec/asset\.py$|^airflow-core/src/airflow/listeners/spec/taskinstance\.py$|^airflow-core/src/airflow/logging/remote\.py$|^airflow-core/src/airflow/models/__init__\.py$|^airflow-core/src/airflow/models/asset\.py$|^airflow-core/src/airflow/models/baseoperator\.py$|^airflow-core/src/airflow/models/connection\.py$|^airflow-core/src/airflow/models/dag\.py$|^airflow-core/src/airflow/models/dagrun\.py$|^airflow-core/src/airflow/models/deadline\.py$|^airflow-core/src/airflow/models/expandinput\.py$|^airflow-core/src/airflow/models/mappedoperator\.py$|^airflow-core/src/airflow/models/operator\.py$|^airflow-core/src/airflow/models/param\.py$|^airflow-core/src/airflow/models/renderedtifields\.py$|^airflow-core/src/airflow/models/serialized_dag\.py$|^airflow-core/src/airflow/models/taskinstance\.py$|^airflow-core/src/airflow/models/taskinstancekey\.py$|^airflow-core/src/airflow/models/taskmap\.py$|^airflow-core/src/airflow/models/taskmixin\.py$|^airflow-core/src/airflow/models/taskreschedule\.py$|^airflow-core/src/airflow/models/variable\.py$|^airflow-core/src/airflow/models/xcom\.py$|^airflow-core/src/airflow/models/xcom_arg\.py$|^airflow-core/src/airflow/operators/subdag\.py$|^airflow-core/src/airflow/plugins_manager\.py$|^airflow-core/src/airflow/providers_manager\.py$|^airflow-core/src/airflow/serialization/definitions/[_a-z]+\.py$|^airflow-core/src/airflow/serialization/enums\.py$|^airflow-core/src/airflow/serialization/helpers\.py$|^airflow-core/src/airflow/serialization/serialized_objects\.py$|^airflow-core/src/airflow/settings\.py$|^airflow-core/src/airflow/task/task_runner/bash_task_runner\.py$|^airflow-core/src/airflow/task/task_runner/standard_task_runner\.py$|^airflow-core/src/airflow/ti_deps/deps/mapped_task_upstream_dep\.py$|^airflow-core/src/airflow/ti_deps/deps/prev_dagrun_dep\.py$|^airflow-core/src/airflow/ti_deps/deps/trigger_rule_dep\.py$|^airflow-core/src/airflow/timetables/assets\.py$|^airflow-core/src/airflow/timetables/base\.py$|^airflow-core/src/airflow/timetables/simple\.py$|^airflow-core/src/airflow/utils/cli\.py$|^airflow-core/src/airflow/utils/context\.py$|^airflow-core/src/airflow/utils/dag_cycle_tester\.py$|^airflow-core/src/airflow/utils/dag_edges\.py$|^airflow-core/src/airflow/utils/dag_parsing_context\.py$|^airflow-core/src/airflow/utils/decorators\.py$|^airflow-core/src/airflow/utils/dot_renderer\.py$|^airflow-core/src/airflow/utils/edgemodifier\.py$|^airflow-core/src/airflow/utils/email\.py$|^airflow-core/src/airflow/utils/helpers\.py$|^airflow-core/src/airflow/utils/operator_helpers\.py$|^airflow-core/src/airflow/utils/session\.py$|^airflow-core/src/airflow/utils/task_group\.py$|^airflow-core/src/airflow/utils/trigger_rule\.py$|^airflow-core/src/airflow/utils/types\.py$"#
+        exclude = #"""
+(?x)
+# Allow SDK imports in these legitimate locations
+^airflow-core/src/airflow/example_dags/.*\.py$|
+
+# TODO: These files need to be refactored to remove SDK coupling
+^airflow-core/src/airflow/__init__\.py$|
+^airflow-core/src/airflow/api/common/mark_tasks\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/datamodels/assets\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/datamodels/connections\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/datamodels/hitl\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/datamodels/variables\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/routes/ui/grid\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/routes/ui/structure\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/services/public/connections\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/services/ui/connections\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/services/ui/grid\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/services/ui/task_group.py$|
+^airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl\.py$|
+^airflow-core/src/airflow/api_fastapi/execution_api/routes/task_instances\.py$|
+^airflow-core/src/airflow/api_fastapi/logging/decorators\.py$|
+^airflow-core/src/airflow/assets/evaluation\.py$|
+^airflow-core/src/airflow/assets/manager\.py$|
+^airflow-core/src/airflow/cli/commands/connection_command\.py$|
+^airflow-core/src/airflow/cli/commands/task_command\.py$|
+^airflow-core/src/airflow/cli/commands/triggerer_command.py$|
+^airflow-core/src/airflow/configuration\.py$|
+^airflow-core/src/airflow/dag_processing/collection\.py$|
+^airflow-core/src/airflow/dag_processing/manager\.py$|
+^airflow-core/src/airflow/dag_processing/processor\.py$|
+^airflow-core/src/airflow/dag_processing/dagbag\.py$|
+^airflow-core/src/airflow/datasets/metadata\.py$|
+^airflow-core/src/airflow/exceptions\.py$|
+^airflow-core/src/airflow/executors/local_executor\.py$|
+^airflow-core/src/airflow/jobs/triggerer_job_runner\.py$|
+^airflow-core/src/airflow/lineage/hook\.py$|
+^airflow-core/src/airflow/listeners/spec/asset\.py$|
+^airflow-core/src/airflow/listeners/spec/taskinstance\.py$|
+^airflow-core/src/airflow/logging/remote\.py$|
+^airflow-core/src/airflow/models/__init__\.py$|
+^airflow-core/src/airflow/models/asset\.py$|
+^airflow-core/src/airflow/models/baseoperator\.py$|
+^airflow-core/src/airflow/models/connection\.py$|
+^airflow-core/src/airflow/models/dag\.py$|
+^airflow-core/src/airflow/models/dagrun\.py$|
+^airflow-core/src/airflow/models/deadline\.py$|
+^airflow-core/src/airflow/models/expandinput\.py$|
+^airflow-core/src/airflow/models/mappedoperator\.py$|
+^airflow-core/src/airflow/models/operator\.py$|
+^airflow-core/src/airflow/models/param\.py$|
+^airflow-core/src/airflow/models/renderedtifields\.py$|
+^airflow-core/src/airflow/models/serialized_dag\.py$|
+^airflow-core/src/airflow/models/taskinstance\.py$|
+^airflow-core/src/airflow/models/taskinstancekey\.py$|
+^airflow-core/src/airflow/models/taskmap\.py$|
+^airflow-core/src/airflow/models/taskmixin\.py$|
+^airflow-core/src/airflow/models/taskreschedule\.py$|
+^airflow-core/src/airflow/models/variable\.py$|
+^airflow-core/src/airflow/models/xcom\.py$|
+^airflow-core/src/airflow/models/xcom_arg\.py$|
+^airflow-core/src/airflow/operators/subdag\.py$|
+^airflow-core/src/airflow/plugins_manager\.py$|
+^airflow-core/src/airflow/providers_manager\.py$|
+^airflow-core/src/airflow/serialization/definitions/[_a-z]+\.py$|
+^airflow-core/src/airflow/serialization/enums\.py$|
+^airflow-core/src/airflow/serialization/helpers\.py$|
+^airflow-core/src/airflow/serialization/serialized_objects\.py$|
+^airflow-core/src/airflow/settings\.py$|
+^airflow-core/src/airflow/task/task_runner/bash_task_runner\.py$|
+^airflow-core/src/airflow/task/task_runner/standard_task_runner\.py$|
+^airflow-core/src/airflow/ti_deps/deps/mapped_task_upstream_dep\.py$|
+^airflow-core/src/airflow/ti_deps/deps/prev_dagrun_dep\.py$|
+^airflow-core/src/airflow/ti_deps/deps/trigger_rule_dep\.py$|
+^airflow-core/src/airflow/timetables/assets\.py$|
+^airflow-core/src/airflow/timetables/base\.py$|
+^airflow-core/src/airflow/timetables/simple\.py$|
+^airflow-core/src/airflow/utils/cli\.py$|
+^airflow-core/src/airflow/utils/context\.py$|
+^airflow-core/src/airflow/utils/dag_cycle_tester\.py$|
+^airflow-core/src/airflow/utils/dag_edges\.py$|
+^airflow-core/src/airflow/utils/dag_parsing_context\.py$|
+^airflow-core/src/airflow/utils/decorators\.py$|
+^airflow-core/src/airflow/utils/dot_renderer\.py$|
+^airflow-core/src/airflow/utils/edgemodifier\.py$|
+^airflow-core/src/airflow/utils/email\.py$|
+^airflow-core/src/airflow/utils/helpers\.py$|
+^airflow-core/src/airflow/utils/operator_helpers\.py$|
+^airflow-core/src/airflow/utils/session\.py$|
+^airflow-core/src/airflow/utils/task_group\.py$|
+^airflow-core/src/airflow/utils/trigger_rule\.py$|
+^airflow-core/src/airflow/utils/types\.py$
+"""#
         check = "./scripts/ci/prek/check_sdk_imports.py {{files}}"
     }
     // Name: Check schema defaults match server-side defaults
@@ -847,7 +989,10 @@ local custom_steps = new Mapping<String, Step> {
     // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
     // Name: Add license for all SQL files
     ["insert-license"] {
-        exclude = #"(?x)^\.github/"#
+        exclude = #"""
+(?x)
+^\.github/
+"""#
         // files: \.sql$
         // TODO: Configure check and/or fix commands
         // check = "..."
