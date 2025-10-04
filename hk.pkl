@@ -34,11 +34,13 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Check minimum Python version
     ["check-min-python-version"] {
         check = "uv run ./scripts/ci/prek/check_min_python_version.py {{files}}"
+        exclusive = true
     }
     // Name: Check that TI and TIS have the same attributes
     ["check-taskinstance-tis-attrs"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/models/taskinstance\.py$|^airflow-core/src/airflow/models/taskinstancehistory\.py$"#)
         check = "uv run ./scripts/ci/prek/check_ti_vs_tis_attributes.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Check and fix default value of default_deferrable
@@ -83,6 +85,7 @@ local local_hooks = new Mapping<String, Step> {
 ^airflow_breeze/templates/PROVIDER_README_TEMPLATE\.rst\.jinja2$
 """#)
         check = "uv run ./scripts/ci/prek/update_providers_build_files.py {{files}}"
+        exclusive = true
     }
     // Name: Check AIRFLOW_V imports in tests
     ["check-airflow-v-imports-in-tests"] {
@@ -91,49 +94,57 @@ local local_hooks = new Mapping<String, Step> {
     }
     // Name: Run 'ruff' for extremely fast Python linting
     ["ruff"] {
-        exclude = Types.Regex(#"^airflow-core/tests/unit/dags/test_imports\.py$|^performance/tests/test_.*\.py$"#)
+        exclude = Types.Regex(#"^airflow-core/tests/unit/dags/test_imports\.py$|^performance/tests/test_.*\.py$|^(?!.*(\.py$|\.pyi$))"#)
         prefix = "mise x pipx:ruff@0.13.3 --"
-        check = "ruff check --force-exclude {{files}}"
-        // args from pre-commit: --fix
-        // Consider adding args to check command
+        check = "ruff check --force-exclude --fix {{files}}"
+        exclusive = true
+        // types (OR): python, pyi
     }
     // Name: Run 'ruff format'
     ["ruff-format"] {
-        exclude = Types.Regex(#"^airflow-core/tests/unit/dags/test_imports\.py$"#)
+        exclude = Types.Regex(#"^airflow-core/tests/unit/dags/test_imports\.py$|^(?!.*(\.py$|\.pyi$))"#)
         check = "uv run ./scripts/ci/prek/ruff_format.py {{files}}"
+        exclusive = true
+        // types (OR): python, pyi
     }
     // Name: Replace bad characters
     ["replace-bad-characters"] {
         exclude = Types.Regex(#"(?x) ^clients/gen/go\.sh$| ^\.gitmodules$| ^airflow-core/src/airflow/ui/openapi-gen/| ^providers/edge3/src/airflow/providers/edge3/plugins/www/openapi-gen/| .*/dist/.*| \.go$| /go\.(mod|sum)$"#)
         check = "uv run ./scripts/ci/prek/replace_bad_characters.py {{files}}"
+        // types (AND): file, text
     }
     // Name: Lint Dockerfile
     ["lint-dockerfile"] {
         glob = Types.Regex("Dockerfile.*$")
         check = "uv run ./scripts/ci/prek/lint_dockerfile.py {{files}}"
+        exclusive = true
     }
     // Name: Check airflow.kubernetes imports are not used
     ["check-airflow-k8s-not-used"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/.*\.py$"#)
         exclude = Types.Regex("^airflow-core/src/airflow/kubernetes/")
         check = #"uv run ./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.kubernetes' --message "You should only import kubernetes code from `airflow.providers.cncf.kubernetes`." {{files}}"#
+        exclusive = true
     }
     // Name: Check common.compat is used for OL deprecated classes
     ["check-common-compat-used-for-openlineage"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/.*\.py$"#)
         exclude = Types.Regex("(?x) ^airflow-core/src/airflow/openlineage/| ^airflow/providers/common/compat/openlineage/facet.py$")
         check = #"uv run ./scripts/ci/prek/check_airflow_imports.py --pattern '^openlineage\.client\.(facet|run)' --message "You should import from `airflow.providers.common.compat.openlineage.facet` instead." {{files}}"#
+        exclusive = true
     }
     // Name: Sort airflow-bug-report provider list
     ["check-airflow-providers-bug-report-template"] {
         glob = Types.Regex(#"^\.github/ISSUE_TEMPLATE/3-airflow_providers_bug_report\.yml$"#)
         check = "uv run ./scripts/ci/prek/check_airflow_bug_report_template.py {{files}}"
+        exclusive = true
     }
     // Name: Check cncf.kubernetes imports used for executors only
     ["check-cncf-k8s-only-for-executors"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/.*\.py$"#)
         exclude = Types.Regex(#"(?x) ^providers/.*/src/airflow/providers/| ^airflow-core/src/airflow/exceptions\.py$| ^airflow-core/src/airflow/models/renderedtifields\.py$| ^airflow-core/src/airflow/serialization/serialized_objects\.py$| ^airflow-core/src/airflow/serialization/serializers/kubernetes\.py$| ^airflow-core/src/airflow/utils/sqlalchemy\.py$"#)
         check = #"uv run ./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.providers\.cncf\.kubernetes' --message "Only few k8s executors exceptions are allowed to use `airflow.providers.cncf.kubernetes`." {{files}}"#
+        exclusive = true
     }
     // Name: Update mounts in the local yml file
     ["update-local-yml-file"] {
@@ -167,6 +178,7 @@ local local_hooks = new Mapping<String, Step> {
     ["generate-volumes-for-sources"] {
         glob = Types.Regex(#"^providers/.*/provider\.yaml$"#)
         check = "uv run ./scripts/ci/prek/generate_volumes_for_sources.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Prevent deprecated sqlalchemy usage
@@ -317,34 +329,40 @@ local local_hooks = new Mapping<String, Step> {
     ["check-aiobotocore-optional"] {
         glob = Types.Regex(#"^providers/.*/provider\.yaml$"#)
         check = "uv run ./scripts/ci/prek/check_aiobotocore_optional.py {{files}}"
+        exclusive = true
     }
     // Name: Checks for Boring Cyborg configuration consistency
     ["check-boring-cyborg-configuration"] {
         check = "uv run ./scripts/ci/prek/boring_cyborg.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Sort INTHEWILD.md alphabetically
     ["update-in-the-wild-to-be-sorted"] {
         glob = Types.Regex(#"^\.pre-commit-config\.yaml$|^INTHEWILD\.md$"#)
         check = "uv run ./scripts/ci/prek/sort_in_the_wild.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Sort and uniquify installed_providers.txt
     ["update-installed-providers-to-be-sorted"] {
         glob = Types.Regex(#"^\.pre-commit-config\.yaml$|^.*_installed_providers\.txt$"#)
         check = "uv run ./scripts/ci/prek/sort_installed_providers.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Sort spelling_wordlist.txt
     ["update-spelling-wordlist-to-be-sorted"] {
         glob = Types.Regex(#"^\.pre-commit-config\.yaml$|^docs/spelling_wordlist\.txt$"#)
         check = "uv run ./scripts/ci/prek/sort_spelling_wordlist.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Lint Helm Chart
     ["lint-helm-chart"] {
         glob = Types.Regex("^chart")
         check = "uv run ./scripts/ci/prek/lint_helm.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Validate chart annotations
@@ -357,6 +375,7 @@ local local_hooks = new Mapping<String, Step> {
     ["kubeconform"] {
         glob = Types.Regex("^chart")
         check = "uv run ./scripts/ci/prek/check_kubeconform.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Check Shell scripts syntax correctness
@@ -382,6 +401,7 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Provider subpackage init files are there
     ["check-providers-subpackages-init-file-exist"] {
         check = "uv run ./scripts/ci/prek/check_providers_subpackages_all_have_init.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
         // always_run was true in pre-commit
     }
@@ -389,35 +409,41 @@ local local_hooks = new Mapping<String, Step> {
     ["check-integrations-list-consistent"] {
         glob = Types.Regex(#"^scripts/ci/docker-compose/integration-.*\.yml$|^contributing-docs/testing/integration_tests\.rst$"#)
         check = "uv run ./scripts/ci/prek/check_integrations_list.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Update Breeze README.md with config files hash
     ["update-breeze-readme-config-hash"] {
         glob = Types.Regex(#"^dev/breeze/pyproject\.toml$|^dev/breeze/README\.md$"#)
         check = "uv run ./scripts/ci/prek/update_breeze_config_hash.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Update Airflow's meta-package pyproject.toml
     ["update-pyproject-toml"] {
         glob = Types.Regex(#"(?x) ^.*/pyproject\.toml$| ^scripts/ci/prek/update_airflow_pyproject_toml\.py$| ^providers/.*/pyproject\.toml$| ^providers/.*/provider\.yaml$"#)
         check = "uv run ./scripts/ci/prek/update_airflow_pyproject_toml.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Update Source Date Epoch for reproducible builds
     ["update-reproducible-source-date-epoch"] {
         glob = Types.Regex(#"^RELEASE_NOTES\.rst$|^chart/RELEASE_NOTES\.rst$"#)
         check = "uv run ./scripts/ci/prek/update_source_date_epoch.py {{files}}"
+        exclusive = true
     }
     // Name: Check top-level breeze deps
     ["check-breeze-top-dependencies-limited"] {
         glob = Types.Regex("^dev/breeze/.*$")
         check = "uv run ./scripts/tools/check_if_limited_dependencies.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Check if tests are in the right folders
     ["check-tests-in-the-right-folders"] {
         glob = Types.Regex(#"^airflow-core/tests/.*\.py$"#)
         check = "uv run ./scripts/ci/prek/check_tests_in_right_folders.py {{files}}"
+        exclusive = true
     }
     // Name: Check if system tests have required segments of code
     ["check-system-tests-present"] {
@@ -433,41 +459,39 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Run markdownlint
     ["lint-markdown"] {
         glob = #"\.(md|mdown|markdown)$"#
+        exclude = Types.Regex(#"^(?!.*(\.md$|\.markdown$|\.mdown$))"#)
         prefix = "mise x pipx:markdownlint-cli@0.38.0 --"
         check = "markdownlint {{files}}"
+        // types (AND): markdown
     }
     // Name: Lint JSON Schema files
     ["lint-json-schema"] {
         glob = Types.Regex(#".*\.schema\.json$"#)
-        check = "uv run ./scripts/ci/prek/lint_json_schema.py {{files}}"
-        // args from pre-commit: --spec-file scripts/ci/prek/draft7_schema.json
-        // Consider adding args to check command
+        check = "uv run ./scripts/ci/prek/lint_json_schema.py --spec-file scripts/ci/prek/draft7_schema.json {{files}}"
+        exclusive = true
     }
     // Original ID: lint-json-schema
     // Name: Lint NodePort Service
     ["lint-json-schema-2"] {
         glob = Types.Regex(#"^scripts/ci/kubernetes/nodeport\.yaml$"#)
-        check = "uv run ./scripts/ci/prek/lint_json_schema.py {{files}}"
-        // args from pre-commit: --spec-url https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.20.2-standalone/service-v1.json
-        // Consider adding args to check command
+        check = "uv run ./scripts/ci/prek/lint_json_schema.py --spec-url https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.20.2-standalone/service-v1.json {{files}}"
+        exclusive = true
     }
     // Original ID: lint-json-schema
     // Name: Lint Docker compose files
     ["lint-json-schema-3"] {
         glob = Types.Regex(#"^scripts/ci/docker-compose/.+\.ya?ml$|docker-compose\.ya?ml$"#)
         exclude = Types.Regex(#"(?x) ^scripts/ci/docker-compose/grafana/.| ^scripts/ci/docker-compose/gremlin/.| ^scripts/ci/docker-compose/.+-config\.ya?ml$"#)
-        check = "uv run ./scripts/ci/prek/lint_json_schema.py {{files}}"
-        // args from pre-commit: --spec-url https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
-        // Consider adding args to check command
+        check = "uv run ./scripts/ci/prek/lint_json_schema.py --spec-url https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json {{files}}"
+        exclusive = true
     }
     // Original ID: lint-json-schema
     // Name: Lint chart/values.schema.json
     ["lint-json-schema-4"] {
         glob = Types.Regex(#"^chart/values\.schema\.json$|^chart/values_schema\.schema\.json$"#)
-        check = "uv run ./scripts/ci/prek/lint_json_schema.py"
+        check = "uv run ./scripts/ci/prek/lint_json_schema.py --spec-file chart/values_schema.schema.json chart/values.schema.json"
+        exclusive = true
         // pass_filenames was false in pre-commit
-        // args from pre-commit: --spec-file chart/values_schema.schema.json chart/values.schema.json
-        // Consider adding args to check command
     }
     // Name: Vendor k8s definitions into values.schema.json
     ["update-vendored-in-k8s-json-schema"] {
@@ -478,18 +502,16 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Lint chart/values.yaml
     ["lint-json-schema-5"] {
         glob = Types.Regex(#"^chart/values\.yaml$|^chart/values\.schema\.json$"#)
-        check = "uv run ./scripts/ci/prek/lint_json_schema.py"
+        check = "uv run ./scripts/ci/prek/lint_json_schema.py --enforce-defaults --spec-file chart/values.schema.json chart/values.yaml"
+        exclusive = true
         // pass_filenames was false in pre-commit
-        // args from pre-commit: --enforce-defaults --spec-file chart/values.schema.json chart/values.yaml
-        // Consider adding args to check command
     }
     // Original ID: lint-json-schema
     // Name: Lint config_templates/config.yml
     ["lint-json-schema-6"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/config_templates/config\.yml$"#)
-        check = "uv run ./scripts/ci/prek/lint_json_schema.py {{files}}"
-        // args from pre-commit: --spec-file airflow-core/src/airflow/config_templates/config.yml.schema.json
-        // Consider adding args to check command
+        check = "uv run ./scripts/ci/prek/lint_json_schema.py --spec-file airflow-core/src/airflow/config_templates/config.yml.schema.json {{files}}"
+        exclusive = true
     }
     // Name: Check persistent creds in workflow files
     ["check-persist-credentials-disabled-in-github-workflows"] {
@@ -519,12 +541,14 @@ track and have security implications. Please remove the zip file from the reposi
     ["lint-chart-schema"] {
         glob = Types.Regex(#"^chart/values\.schema\.json$"#)
         check = "uv run ./scripts/ci/prek/chart_schema.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Inline Dockerfile and Dockerfile.ci scripts
     ["update-inlined-dockerfile-scripts"] {
         glob = Types.Regex(#"^Dockerfile$|^Dockerfile\.ci$|^scripts/docker/.*$"#)
         check = "uv run ./scripts/ci/prek/inline_scripts_in_docker.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Check changelogs for duplicate entries
@@ -554,6 +578,7 @@ track and have security implications. Please remove the zip file from the reposi
     ["update-breeze-cmd-output"] {
         glob = Types.Regex(#"(?x) ^dev/breeze/.*$| ^\.pre-commit-config\.yaml$| ^scripts/ci/prek/breeze_cmd_line\.py$| ^generated/provider_dependencies\.json$"#)
         check = "uv run ./scripts/ci/prek/breeze_cmd_line.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Check that example dags url include provider versions
@@ -587,25 +612,26 @@ track and have security implications. Please remove the zip file from the reposi
     ["check-provider-docs-valid"] {
         glob = Types.Regex(#"^providers/.*/provider\.yaml$|^.*/docs/.*"#)
         check = "uv run ./scripts/ci/prek/check_provider_docs.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: bandit
     ["bandit"] {
         glob = Types.Regex("^airflow-core/src/airflow/.*")
-        exclude = Types.Regex("airflow/example_dags/.*")
+        exclude = Types.Regex(#"airflow/example_dags/.*|^(?!.*(\.py$))"#)
         prefix = "mise x pipx:bandit@1.7.6 --"
-        check = "bandit {{files}}"
-        // args from pre-commit: --skip B101,B301,B324,B403,B404,B603 --severity-level high
-        // Consider adding args to check command
+        check = "bandit --skip B101,B301,B324,B403,B404,B603 --severity-level high {{files}}"
+        exclusive = true
+        // types (AND): python
     }
     // Name: pylint
     ["pylint"] {
         glob = Types.Regex("^airflow-core/src/airflow/.*")
-        exclude = Types.Regex("airflow/example_dags/.*")
+        exclude = Types.Regex(#"airflow/example_dags/.*|^(?!.*(\.py$))"#)
         prefix = "mise x pipx:pylint@3.1.0 --"
-        check = "pylint {{files}}"
-        // args from pre-commit: --disable=all --enable=W0133
-        // Consider adding args to check command
+        check = "pylint --disable=all --enable=W0133 {{files}}"
+        exclusive = true
+        // types (AND): python
     }
     // Name: Check no migration is done on FAB related table
     ["check-fab-migrations"] {
@@ -628,6 +654,7 @@ track and have security implications. Please remove the zip file from the reposi
 """)
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/ts_compile_lint_ui.py {{files}}"
+        exclusive = true
     }
     // Name: Compile / format / lint simple auth manager UI
     ["ts-compile-lint-simple-auth-manager-ui"] {
@@ -644,6 +671,7 @@ track and have security implications. Please remove the zip file from the reposi
 """)
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/ts_compile_lint_simple_auth_manager_ui.py {{files}}"
+        exclusive = true
     }
     // Name: Compile / format / lint edge UI
     ["ts-compile-lint-edge-ui"] {
@@ -659,37 +687,44 @@ track and have security implications. Please remove the zip file from the reposi
 """)
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/ts_compile_lint_edge.py {{files}}"
+        exclusive = true
     }
     // Name: Run mypy for dev
     ["mypy-dev"] {
         glob = Types.Regex(#"^dev/.*\.py$|^scripts/.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy.py {{files}}"
+        exclusive = true
     }
     // Name: Run mypy for airflow-core
     ["mypy-airflow-core"] {
         glob = Types.Regex(#"^airflow-core/.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy.py {{files}}"
+        exclusive = true
     }
     // Name: Run mypy for providers
     ["mypy-providers"] {
         glob = Types.Regex(#"^providers/.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy.py {{files}}"
+        exclusive = true
     }
     // Name: Run mypy for task-sdk
     ["mypy-task-sdk"] {
         glob = Types.Regex(#"^task-sdk/.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy.py {{files}}"
+        exclusive = true
     }
     // Name: Run mypy for devel-common
     ["mypy-devel-common"] {
         glob = Types.Regex(#"^devel-common/.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy.py {{files}}"
+        exclusive = true
     }
     // Name: Run mypy for airflow-ctl
     ["mypy-airflow-ctl"] {
         glob = Types.Regex(#"^airflow-ctl/src/airflowctl/.*\.py$|^airflow-ctl/tests/.*\.py$"#)
         exclude = Types.Regex(".*generated.py")
         check = "uv run ./scripts/ci/prek/mypy.py {{files}}"
+        exclusive = true
     }
     // Name: Generate the FastAPI API spec
     ["generate-openapi-spec"] {
@@ -727,11 +762,13 @@ track and have security implications. Please remove the zip file from the reposi
         glob = Types.Regex(#"^providers/.*/provider\.yaml$"#)
         exclude = Types.Regex("^providers/.*/.venv/.*$")
         check = "uv run ./scripts/ci/prek/check_provider_yaml_files.py {{files}}"
+        exclusive = true
     }
     // Name: Check templated fields mapped in operators/sensors
     ["check-template-fields-valid"] {
         glob = Types.Regex(#"^(providers/.*/)?airflow-core/.*/(sensors|operators)/.*\.py$"#)
         check = "uv run ./scripts/ci/prek/check_template_fields.py {{files}}"
+        exclusive = true
     }
     // Name: Update migration ref doc
     ["update-migration-references"] {
@@ -743,6 +780,7 @@ track and have security implications. Please remove the zip file from the reposi
     ["generate-tasksdk-datamodels"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/api_fastapi/execution_api/.*\.py$"#)
         check = "uv run uv run -p 3.12 --no-progress --active --group codegen --project apache-airflow-task-sdk --directory task-sdk -s dev/generate_task_sdk_models.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Generate Datamodels for AirflowCTL
@@ -752,6 +790,7 @@ track and have security implications. Please remove the zip file from the reposi
 bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --project apache-airflow-ctl --directory airflow-ctl/ datamodel-codegen &&
  uv run -p 3.12 --no-dev --no-progress --active --group codegen --project apache-airflow-ctl --directory airflow-ctl/ datamodel-codegen --input="../airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/v2-simple-auth-manager-generated.yaml" --output="src/airflowctl/api/datamodels/auth_generated.py"'
 """#
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Update ER diagram
@@ -764,6 +803,7 @@ bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --proje
     ["check-default-configuration"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/config_templates/config\.yml$"#)
         check = "uv run ./scripts/ci/prek/check_default_configuration.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Generate SVG from Airflow CTL Commands
@@ -776,11 +816,15 @@ bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --proje
     ["check-imports-in-providers"] {
         glob = Types.Regex(#"^providers/.*/src/airflow/providers/.*version_compat.*\.py$"#)
         check = "uv run ./scripts/ci/prek/check_imports_in_providers.py {{files}}"
+        exclusive = true
     }
     // Name: Check for correct version_compat imports in providers
     ["provider-version-compat"] {
         glob = Types.Regex(#"^providers/.*/src/airflow/providers/.*\.py$"#)
+        exclude = Types.Regex(#"^(?!.*(\.py$))"#)
         check = "uv run ./scripts/ci/prek/check_provider_version_compat.py {{files}}"
+        exclusive = true
+        // types (AND): python
     }
     // Name: No AIRFLOW_V_* imports in airflow-core
     ["check-airflow-version-checks-in-core"] {
@@ -882,13 +926,16 @@ bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --proje
 ^airflow-core/src/airflow/utils/task_group\.py$|
 ^airflow-core/src/airflow/utils/trigger_rule\.py$|
 ^airflow-core/src/airflow/utils/types\.py$
+|^(?!.*(\.py$))
 """#)
         check = "uv run ./scripts/ci/prek/check_sdk_imports.py {{files}}"
+        // types (AND): python
     }
     // Name: Check schema defaults match server-side defaults
     ["check-schema-defaults"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/serialization/schema\.json$|^airflow-core/src/airflow/serialization/serialized_objects\.py$"#)
         check = "uv run ./scripts/ci/prek/check_schema_defaults.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Check for problematic context manager class decorators
@@ -1099,6 +1146,7 @@ local custom_steps = new Mapping<String, Step> {
     // Repo: https://github.com/woodruffw/zizmor-pre-commit @ 3c10df247c55cf21f75003105b879f145096bd4a
     // Name: Run zizmor to check for github workflow syntax errors
     ["zizmor"] {
+        exclusive = true
         // files: ^\.github/workflows/.*$|^\.github/actions/.*$
         // File type filtering needed
         // TODO: Configure check and/or fix commands
@@ -1112,17 +1160,20 @@ local manual_steps = new Mapping<String, Step> {
     ["upgrade-important-versions"] {
         glob = Types.Regex(#"(?x) ^\.pre-commit-config\.yaml$| ^\.github/\.pre-commit-config\.yaml$| ^scripts/ci/prek/update_installers_and_prek\.py$"#)
         check = "uv run ./scripts/ci/prek/upgrade_important_versions.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Check translation completeness (manual)
     ["check-translations-completeness"] {
         check = "uv run ./dev/i18n/check_translations_completeness.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Update chart dependencies to latest (manual)
     ["update-chart-dependencies"] {
         glob = Types.Regex(#"^\.pre-commit-config\.yaml$|^scripts/ci/prek/update_build_dependencies\.py$"#)
         check = "uv run ./scripts/ci/prek/update_chart_dependencies.py"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Name: Compile ui assets (manual)
@@ -1130,6 +1181,7 @@ local manual_steps = new Mapping<String, Step> {
         glob = Types.Regex("^airflow-core/src/airflow/ui/|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/")
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/compile_ui_assets.py"
+        // types (OR): javascript, ts, tsx
         // pass_filenames was false in pre-commit
     }
     // Name: Compile ui assets in dev mode (manual)
@@ -1137,6 +1189,7 @@ local manual_steps = new Mapping<String, Step> {
         glob = Types.Regex("^airflow-core/src/airflow/ui/|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/")
         prefix = "mise x pipx:pnpm@9.7.1 --"
         check = "./scripts/ci/prek/compile_ui_assets_dev.py"
+        // types (OR): javascript, ts, tsx
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-dev
@@ -1144,6 +1197,7 @@ local manual_steps = new Mapping<String, Step> {
     ["mypy-dev-2"] {
         glob = Types.Regex(#"^.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy_folder.py dev"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-airflow-core
@@ -1151,6 +1205,7 @@ local manual_steps = new Mapping<String, Step> {
     ["mypy-airflow-core-2"] {
         glob = Types.Regex(#"^airflow-core/.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy_folder.py airflow-core"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-providers
@@ -1158,6 +1213,7 @@ local manual_steps = new Mapping<String, Step> {
     ["mypy-providers-2"] {
         glob = Types.Regex(#"^.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy_folder.py providers"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-task-sdk
@@ -1165,6 +1221,7 @@ local manual_steps = new Mapping<String, Step> {
     ["mypy-task-sdk-2"] {
         glob = Types.Regex(#"^.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy_folder.py task-sdk"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-devel-common
@@ -1172,6 +1229,7 @@ local manual_steps = new Mapping<String, Step> {
     ["mypy-devel-common-2"] {
         glob = Types.Regex(#"^.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy_folder.py devel-common"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-airflow-ctl
@@ -1179,21 +1237,22 @@ local manual_steps = new Mapping<String, Step> {
     ["mypy-airflow-ctl-2"] {
         glob = Types.Regex(#"^.*\.py$"#)
         check = "uv run ./scripts/ci/prek/mypy_folder.py airflow-ctl"
+        exclusive = true
         // pass_filenames was false in pre-commit
     }
 }
 
 hooks {
-    ["pre-push"] {
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
         steps {
             ...linters
             ...local_hooks
             ...custom_steps
         }
     }
-    ["pre-commit"] {
-        fix = true
-        stash = "git"
+    ["pre-push"] {
         steps {
             ...linters
             ...local_hooks
