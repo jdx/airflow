@@ -1,0 +1,1296 @@
+amends "/Users/jdx/src/hk/pkl/Config.pkl"
+import "/Users/jdx/src/hk/pkl/Builtins.pkl"
+
+// pre-commit default_language_version:
+//   python: python3
+//   node: 22.19.0
+// Note: Use mise.toml to manage language versions in hk
+
+local linters = new Mapping<String, Step> {
+    ["check-merge-conflict"] = Builtins.check_merge_conflict
+    ["debug-statements"] = Builtins.python_debug_statements
+    ["detect-private-key"] = (Builtins.detect_private_key) {
+        exclude = #"^providers/ssh/docs/connections/ssh\.rst$"#
+    }
+    ["end-of-file-fixer"] = (Builtins.newlines) {
+        exclude = #"""
+(?x) ^airflow-core/docs/img/.*\.dot| ^airflow-core/docs/img/.*\.sha256| .*/dist/.*| LICENSES-ui\.txt$| .*/openapi-gen/.*
+
+"""#
+    }
+    ["mixed-line-ending"] = Builtins.mixed_line_ending
+    ["check-executables-have-shebangs"] = Builtins.check_executables_have_shebangs
+    ["trailing-whitespace"] = (Builtins.trailing_whitespace) {
+        exclude = #"""
+(?x) ^airflow-core/docs/img/.*\.dot$| ^dev/breeze/doc/images/output.*$| ^.*/openapi-gen/.*$| ^airflow-ctl/docs/images/.*\.svg$
+
+"""#
+    }
+    ["yamllint"] = (Builtins.yamllint) {
+        exclude = #"""
+(?x) ^.*airflow\.template\.yaml$| ^.*init_git_sync\.template\.yaml$| ^chart/(?:templates|files)/.*\.yaml$| ^helm-tests/tests/chart_utils/keda.sh_scaledobjects\.yaml$| .*/v1.*\.yaml$| ^.*openapi.*\.yaml$| ^\.pre-commit-config\.yaml$| ^.*reproducible_build\.yaml$| ^.*pnpm-lock\.yaml$
+
+"""#
+        // types (AND): yaml
+    }
+}
+
+local local_hooks = new Mapping<String, Step> {
+    // Name: Check minimum Python version
+    ["check-min-python-version"] {
+        check = "./scripts/ci/prek/check_min_python_version.py {{files}}"
+    }
+    // Name: Upgrade important versions (manual)
+    ["upgrade-important-versions"] {
+        glob = #"""
+(?x) ^\.pre-commit-config\.yaml$| ^\.github/\.pre-commit-config\.yaml$| ^scripts/ci/prek/update_installers_and_prek\.py$
+
+"""#
+        check = "./scripts/ci/prek/upgrade_important_versions.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check translation completeness (manual)
+    ["check-translations-completeness"] {
+        check = "./dev/i18n/check_translations_completeness.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Update chart dependencies to latest (manual)
+    ["update-chart-dependencies"] {
+        glob = #"^\.pre-commit-config\.yaml$|^scripts/ci/prek/update_build_dependencies\.py$"#
+        check = "./scripts/ci/prek/update_chart_dependencies.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check that TI and TIS have the same attributes
+    ["check-taskinstance-tis-attrs"] {
+        glob = #"^airflow-core/src/airflow/models/taskinstance\.py$|^airflow-core/src/airflow/models/taskinstancehistory\.py$"#
+        check = "./scripts/ci/prek/check_ti_vs_tis_attributes.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check and fix default value of default_deferrable
+    ["check-deferrable-default"] {
+        glob = #"^(providers/.*/)?airflow/.*/(sensors|operators)/.*\.py$"#
+        check = "./scripts/ci/prek/check_deferrable_default.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Update dependencies for providers
+    ["update-providers-dependencies"] {
+        check = "./scripts/ci/prek/update_providers_dependencies.py"
+        // pass_filenames was false in pre-commit
+        // always_run was true in pre-commit
+    }
+    // Name: Check shared distributions structure
+    ["check-shared-distributions-structure"] {
+        glob = "^shared/.*$"
+        check = "./scripts/ci/prek/check_shared_distributions_structure.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check shared distributions usage
+    ["check-shared-distributions-usage"] {
+        glob = "^shared/.*$|^.*/pyproject.toml$|^.*/_shared/.*$"
+        check = "./scripts/ci/prek/check_shared_distributions_usage.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: No templated field logic checks in operator __init__
+    ["validate-operators-init"] {
+        glob = #"^providers/.*/src/airflow/providers/.*/(operators|transfers|sensors)/.*\.py$"#
+        check = "./scripts/ci/prek/validate_operators_init.py {{files}}"
+    }
+    // Name: Update providers build files
+    ["update-providers-build-files"] {
+        glob = #"""
+(?x)
+^providers/[^\/]*/src/airflow/providers/[^\/]*/__init__\.py$|
+^providers/[^\/]*/[^\/]*/src/airflow/providers/[^\/]*/[^\/]*/__init__\.py$|
+^providers/.*/pyproject\.toml$|
+^providers/.*/provider\.yaml$|
+^airflow_breeze/templates/PROVIDER__INIT__PY_TEMPLATE\.py\.jinja2$|
+^airflow_breeze/templates/get_provider_info_TEMPLATE\.py\.jinja2$|
+^airflow_breeze/templates/PROVIDER_README_TEMPLATE\.rst\.jinja2$
+
+"""#
+        check = "./scripts/ci/prek/update_providers_build_files.py {{files}}"
+    }
+    // Name: Check AIRFLOW_V imports in tests
+    ["check-airflow-v-imports-in-tests"] {
+        glob = #"^providers/.*/tests/.+\.py$"#
+        check = "./scripts/ci/prek/check_airflow_v_imports_in_tests.py {{files}}"
+    }
+    // Name: Run 'ruff' for extremely fast Python linting
+    ["ruff"] {
+        exclude = #"^airflow-core/tests/unit/dags/test_imports\.py$|^performance/tests/test_.*\.py$"#
+        prefix = "mise x pipx:ruff@0.13.3 --"
+        check = "ruff check --force-exclude {{files}}"
+        // args from pre-commit: --fix
+        // Consider adding args to check command
+    }
+    // Name: Run 'ruff format'
+    ["ruff-format"] {
+        exclude = #"^airflow-core/tests/unit/dags/test_imports\.py$"#
+        check = "./scripts/ci/prek/ruff_format.py {{files}}"
+    }
+    // Name: Replace bad characters
+    ["replace-bad-characters"] {
+        exclude = #"""
+(?x) ^clients/gen/go\.sh$| ^\.gitmodules$| ^airflow-core/src/airflow/ui/openapi-gen/| ^providers/edge3/src/airflow/providers/edge3/plugins/www/openapi-gen/| .*/dist/.*| \.go$| /go\.(mod|sum)$
+
+"""#
+        check = "./scripts/ci/prek/replace_bad_characters.py {{files}}"
+    }
+    // Name: Lint Dockerfile
+    ["lint-dockerfile"] {
+        glob = "Dockerfile.*$"
+        check = "./scripts/ci/prek/lint_dockerfile.py {{files}}"
+    }
+    // Name: Check airflow.kubernetes imports are not used
+    ["check-airflow-k8s-not-used"] {
+        glob = #"^airflow-core/src/airflow/.*\.py$"#
+        exclude = "^airflow-core/src/airflow/kubernetes/"
+        check = #"./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.kubernetes' --message "You should only import kubernetes code from `airflow.providers.cncf.kubernetes`." {{files}}"#
+    }
+    // Name: Check common.compat is used for OL deprecated classes
+    ["check-common-compat-used-for-openlineage"] {
+        glob = #"^airflow-core/src/airflow/.*\.py$"#
+        exclude = #"""
+(?x) ^airflow-core/src/airflow/openlineage/| ^airflow/providers/common/compat/openlineage/facet.py$
+
+"""#
+        check = #"./scripts/ci/prek/check_airflow_imports.py --pattern '^openlineage\.client\.(facet|run)' --message "You should import from `airflow.providers.common.compat.openlineage.facet` instead." {{files}}"#
+    }
+    // Name: Sort airflow-bug-report provider list
+    ["check-airflow-providers-bug-report-template"] {
+        glob = #"^\.github/ISSUE_TEMPLATE/3-airflow_providers_bug_report\.yml$"#
+        check = "./scripts/ci/prek/check_airflow_bug_report_template.py {{files}}"
+    }
+    // Name: Check cncf.kubernetes imports used for executors only
+    ["check-cncf-k8s-only-for-executors"] {
+        glob = #"^airflow-core/src/airflow/.*\.py$"#
+        exclude = #"""
+(?x) ^providers/.*/src/airflow/providers/| ^airflow-core/src/airflow/exceptions\.py$| ^airflow-core/src/airflow/models/renderedtifields\.py$| ^airflow-core/src/airflow/serialization/serialized_objects\.py$| ^airflow-core/src/airflow/serialization/serializers/kubernetes\.py$| ^airflow-core/src/airflow/utils/sqlalchemy\.py$
+
+"""#
+        check = #"./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.providers\.cncf\.kubernetes' --message "Only few k8s executors exceptions are allowed to use `airflow.providers.cncf.kubernetes`." {{files}}"#
+    }
+    // Name: Update mounts in the local yml file
+    ["update-local-yml-file"] {
+        glob = #"^dev/breeze/src/airflow_breeze/utils/docker_command_utils\.py$|^scripts/ci/docker_compose/local\.yml$"#
+        check = "./scripts/ci/prek/local_yml_mounts.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check dependency of SQL providers
+    ["check-sql-dependency-common-data-structure"] {
+        glob = #"^providers/.*/src/airflow/providers/.*/hooks/.*\.py$"#
+        check = "./scripts/ci/prek/check_common_sql_dependency.py {{files}}"
+    }
+    // Name: Checks setup extra packages
+    ["check-extra-packages-references"] {
+        glob = #"^airflow-core/docs/extra-packages-ref\.rst$|^hatch_build\.py$"#
+        check = "./scripts/ci/prek/check_extra_packages_ref.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check order of extras in Dockerfile
+    ["check-extras-order"] {
+        glob = "^Dockerfile$"
+        check = "./scripts/ci/prek/check_order_dockerfile_extras.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Generate airflow diagrams
+    ["generate-airflow-diagrams"] {
+        glob = #"""
+(?x) ^airflow-core/docs/.*/diagram_[^/]*\.py$| ^docs/images/.*\.py$| ^airflow-ctl/docs/images/diagrams/.*\.py$
+
+"""#
+        check = "./scripts/ci/prek/generate_airflow_diagrams.py {{files}}"
+    }
+    // Name: Generate volumes for docker compose
+    ["generate-volumes-for-sources"] {
+        glob = #"^providers/.*/provider\.yaml$"#
+        check = "./scripts/ci/prek/generate_volumes_for_sources.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Prevent deprecated sqlalchemy usage
+    ["prevent-deprecated-sqlalchemy-usage"] {
+        glob = #"""
+(?x) ^airflow-ctl.*\.py$| ^airflow-core/src/airflow/models/.*\.py$| ^providers/fab/.*\.py$| ^task_sdk.*\.py$
+
+"""#
+        check = "./scripts/ci/prek/prevent_deprecated_sqlalchemy_usage.py {{files}}"
+    }
+    // Name: Updates supported versions in documentation
+    ["update-supported-versions"] {
+        glob = #"^airflow-core/docs/installation/supported-versions\.rst$|^scripts/ci/prek/supported_versions\.py$|^README\.md$"#
+        check = "./scripts/ci/prek/supported_versions.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check that the REVISION_HEADS_MAP is up-to-date
+    ["check-revision-heads-map"] {
+        glob = #"""
+(?x) ^scripts/ci/prek/version_heads_map\.py$| ^airflow-core/src/airflow/migrations/versions/.*$|^airflow-core/src/airflow/migrations/versions| ^providers/fab/src/airflow/providers/fab/migrations/versions/.*$|^providers/fab/src/airflow/providers/fab/migrations/versions| ^airflow-core/src/airflow/utils/db\.py$| ^providers/fab/src/airflow/providers/fab/auth_manager/models/db\.py$
+
+"""#
+        check = "./scripts/ci/prek/check_revision_heads_map.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Update versions in docs
+    ["update-version"] {
+        glob = #"^docs|^airflow-core/src/airflow/__init__\.py$|.*/pyproject\.toml$"#
+        check = "./scripts/ci/prek/update_versions.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check for pydevd debug statements accidentally left
+    ["check-pydevd-left-in-code"] {
+        glob = #"\.py$"#
+        check = #"pydevd.*settrace\( {{files}}"#
+    }
+    // Name: Check pytest.mark.db_test use in providers
+    ["check-pytest-mark-db-test-in-providers"] {
+        glob = #"""
+(?x) ^providers/airbyte/.*\.py$| ^providers/apache/beam/.*\.py$| ^providers/apache/flink/.*\.py$| ^providers/apache/iceberg/.*\.py$| ^providers/apache/kafka/.*\.py$| ^providers/apprise/.*\.py$| ^providers/arangodb/.*\.py$| ^providers/asana/.*\.py$| ^providers/atlassian/jira/.*\.py$| ^providers/cloudant/.*\.py$| ^providers/cohere/.*\.py$| ^providers/common/compat/.*\.py$| ^providers/common/messaging/.*\.py$| ^providers/datadog/.*\.py$| ^providers/dingding/.*\.py$| ^providers/discord/.*\.py$| ^providers/exasol/.*\.py$| ^providers/facebook/.*\.py$| ^providers/ftp/.*\.py$| ^providers/grpc/.*\.py$| ^providers/hashicorp/.*\.py$| ^providers/imap/.*\.py$| ^providers/influxdb/.*\.py$| ^providers/jdbc/.*\.py$| ^providers/jenkins/.*\.py$| ^providers/mongo/.*\.py$| ^providers/microsoft/psrp/.*\.py$| ^providers/microsoft/winrm/.*\.py$| ^providers/neo4j/.*\.py$| ^providers/odbc/.*\.py$| ^providers/openai/.*\.py$| ^providers/openfaas/.*\.py$| ^providers/opsgenie/.*\.py$| ^providers/oracle/.*\.py$| ^providers/pagerduty/.*\.py$| ^providers/pgvector/.*\.py$| ^providers/pinecone/.*\.py$| ^providers/postgres/.*\.py$| ^providers/presto/.*\.py$| ^providers/segment/.*\.py$| ^providers/sendgrid/.*\.py$| ^providers/singularity/.*\.py$| ^providers/slack/.*\.py$| ^providers/smtp/.*\.py$| ^providers/tableau/.*\.py$| ^providers/teradata/.*\.py$| ^providers/trino/.*\.py$| ^providers/vertica/.*\.py$| ^providers/yandex/.*\.py$| ^providers/zendesk/.*\.py$
+
+"""#
+        check = #"pytest\.mark\.db_test {{files}}"#
+    }
+    // Name: Verify no hard-coded version in example dags
+    ["check-links-to-example-dags-do-not-use-hardcoded-versions"] {
+        glob = #"^providers/.*/docs/.*\.rst"#
+        check = #"""
+(?i) .*https://github.*/main/providers/.*/src/airflow/providers/.*/example_dags/| .*https://github.*/master/providers/.*/src/airflow/providers/.*/example_dags/
+ {{files}}
+"""#
+    }
+    // Name: Don't use safe in templates
+    ["check-safe-filter-usage-in-html"] {
+        glob = #"\.html$"#
+        check = #"\|\s*safe {{files}}"#
+    }
+    // Name: No providers imports in core example DAGs
+    ["check-no-providers-in-core-examples"] {
+        glob = #"^airflow-core/src/airflow/example_dags/.*\.py$"#
+        check = #"^\s*from airflow\.providers.(?!standard.) {{files}}"#
+    }
+    // Name: Do not use DeprecationWarning in providers
+    ["check-no-airflow-deprecation-in-providers"] {
+        glob = #"^providers/.*/src/airflow/providers/.*\.py$"#
+        check = #"^\s*DeprecationWarning* {{files}}"#
+    }
+    // Name: Don't use urlparse in code
+    ["check-urlparse-usage-in-code"] {
+        glob = #"\.py$"#
+        check = #"^\s*from urllib\.parse import ((\|, )(urlparse\|urlunparse))+$ {{files}}"#
+    }
+    // Name: Check NEW_SESSION is only used with @provide_session
+    ["check-only-new-session-with-provide-session"] {
+        glob = #"^airflow-core/src/airflow/.+\.py$"#
+        exclude = "^airflow-core/src/airflow/serialization/pydantic/.*"
+        check = "./scripts/ci/prek/new_session_in_provide_session.py {{files}}"
+    }
+    // Name: Check for language that we do not accept as community
+    ["check-for-inclusive-language"] {
+        exclude = #"""
+(?x) ^airflow-core/src/airflow/ui/src/i18n/config\.ts$| ^airflow-core/src/airflow/ui/openapi-gen/| ^airflow-core/src/airflow/ui/public/i18n/locales/de/README\.md$| ^airflow-core/src/airflow/cli/commands/local_commands/fastapi_api_command\.py$| ^airflow-core/src/airflow/config_templates/| ^airflow-core/src/airflow/models/baseoperator\.py$| ^airflow-core/src/airflow/operators/__init__\.py$| ^providers/common/sql/tests/provider_tests/common/sql/operators/test_sql_execute\.py$| ^providers/amazon/src/airflow/providers/amazon/aws/hooks/emr\.py$| ^providers/amazon/src/airflow/providers/amazon/aws/operators/emr\.py$| ^providers/apache/cassandra/src/airflow/providers/apache/cassandra/hooks/cassandra\.py$| ^providers/apache/hive/src/airflow/providers/apache/hive/operators/hive_stats\.py$| ^providers/apache/hive/src/airflow/providers/apache/hive/transfers/vertica_to_hive\.py$| ^providers/apache/spark/src/airflow/providers/apache/spark/decorators/| ^providers/apache/spark/src/airflow/providers/apache/spark/hooks/| ^providers/apache/spark/src/airflow/providers/apache/spark/operators/| ^providers/exasol/src/airflow/providers/exasol/hooks/exasol\.py$| ^providers/fab/src/airflow/providers/fab/auth_manager/security_manager/| ^providers/fab/src/airflow/providers/fab/www/static/| ^providers/fab/src/airflow/providers/fab/www/templates/| ^providers/google/src/airflow/providers/google/cloud/hooks/bigquery\.py$| ^providers/google/src/airflow/providers/google/cloud/operators/cloud_build\.py$| ^providers/google/src/airflow/providers/google/cloud/operators/dataproc\.py$| ^providers/google/src/airflow/providers/google/cloud/operators/mlengine\.py$| ^providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/definition.py| ^providers/microsoft/azure/src/airflow/providers/microsoft/azure/hooks/cosmos\.py$| ^providers/microsoft/winrm/src/airflow/providers/microsoft/winrm/hooks/winrm\.py$| ^airflow-core/docs/.*commits\.rst$| ^providers/microsoft/winrm/src/airflow/providers/microsoft/winrm/operators/winrm\.py$| ^providers/opsgenie/src/airflow/providers/opsgenie/hooks/opsgenie\.py$| ^providers/redis/src/airflow/providers/redis/provider\.yaml$| ^airflow-core/src/airflow/serialization/serialized_objects\.py$| ^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/pnpm-lock\.yaml$| ^airflow-core/src/airflow/ui/pnpm-lock\.yaml$| ^airflow-core/src/airflow/utils/db\.py$| ^airflow-core/src/airflow/utils/trigger_rule\.py$| ^chart/values.schema\.json$| ^helm-tests/tests/chart_utils/helm_template_generator\.py$| ^helm-tests/tests/chart_utils/ingress-networking-v1beta1\.json$| ^dev/| ^devel-common/src/docs/README\.rst$| ^docs/apache-airflow-providers-amazon/secrets-backends/aws-ssm-parameter-store\.rst$| ^providers/apache/kafka/docs/connections/kafka\.rst$| ^providers/apache/hdfs/docs/connections\.rst$| ^providers/apache/spark/docs/decorators/pyspark\.rst$| ^providers/microsoft/azure/docs/connections/azure_cosmos\.rst$| ^providers/fab/docs/auth-manager/webserver-authentication\.rst$| ^providers/google/docs/operators/cloud/kubernetes_engine\.rst$| ^providers/cncf/kubernetes/docs/operators\.rst$| ^.*/conf\.py$| ^.*/conf_constants\.py$| ^.*/provider_conf\.py$| ^devel-common/src/sphinx_exts/removemarktransform\.py| ^devel-common/src/tests_common/test_utils/db\.py| ^airflow-core/newsfragments/41761.significant\.rst$| ^scripts/ci/prek/vendor_k8s_json_schema\.py$| ^scripts/ci/docker-compose/integration-keycloak\.yml$| ^scripts/ci/docker-compose/keycloak/keycloak-entrypoint\.sh$| ^airflow-core/tests/| ^providers/.*/tests/| ^\.pre-commit-config\.yaml$| ^.*CHANGELOG\.(rst|txt)$| ^.*changelog\.(rst|txt)$| ^.*commits\.(rst|txt)$| ^.*RELEASE_NOTES\.rst$| ^contributing-docs/03_contributors_quick_start\.rst$| ^.*\.(png|gif|jp[e]?g|svg|tgz|lock)$| git| ^airflow-core/newsfragments/43349\.significant\.rst$| ^airflow-core/newsfragments/41368\.significant\.rst$| .*/dist/.*| package-lock\.json$| ^providers/edge3/src/airflow/providers/edge3/plugins/www/pnpm-lock.yaml$
+
+"""#
+        check = #"""
+(?ix) (black|white)[_-]?list| \bshe\b| \bhe\b| \bher\b| \bhis\b| \bmaster\b| \bslave\b| \bsanity\b| \bdummy\b
+ {{files}}
+"""#
+    }
+    // Name: Check BaseOperator and partial() arguments
+    ["check-base-operator-partial-arguments"] {
+        glob = #"^airflow-core/src/airflow/models/(?:base|mapped)operator\.py$"#
+        check = "./scripts/ci/prek/check_base_operator_partial_arguments.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Sync model __init__ and decorator arguments
+    ["check-init-decorator-arguments"] {
+        glob = #"^task-sdk/src/airflow/sdk/definitions/dag\.py$|^task-sdk/src/airflow/sdk/definitions/decorators/task_group\.py$"#
+        check = "./scripts/ci/prek/check_init_decorator_arguments.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Sync template context variable refs
+    ["check-template-context-variable-in-sync"] {
+        glob = #"^airflow-core/src/airflow/models/taskinstance\.py$|^task-sdk/src/airflow/sdk/definitions/context\.py$|^airflow-core/docs/templates-ref\.rst$"#
+        check = "./scripts/ci/prek/check_template_context_variable_in_sync.py {{files}}"
+    }
+    // Name: Check BaseOperator core imports
+    ["check-base-operator-usage"] {
+        glob = #"\.py$"#
+        exclude = #"""
+(?x) ^airflow-core/src/airflow/decorators/.*$| ^airflow-core/src/airflow/hooks/.*$| ^airflow-core/src/airflow/operators/.*$| ^providers/.*$
+
+"""#
+        check = #"from airflow\.models import.* BaseOperator\b {{files}}"#
+    }
+    // Original ID: check-base-operator-usage
+    // Name: Check BaseOperatorLink core imports
+    ["check-base-operator-usage-2"] {
+        glob = #"\.py$"#
+        exclude = #"""
+(?x) ^airflow-core/src/airflow/decorators/.*$| ^airflow-core/src/airflow/hooks/.*$| ^airflow-core/src/airflow/operators/.*$| ^providers/.*/src/airflow/providers/.*$| ^providers/.*/src/airflow/providers/standard/sensors/.*$
+
+"""#
+        check = #"^\s*from airflow\.models\.baseoperatorlink import BaseOperatorLink\b {{files}}"#
+    }
+    // Original ID: check-base-operator-usage
+    // Name: Check BaseOperator other imports
+    ["check-base-operator-usage-3"] {
+        glob = #"""
+(?x) ^providers/.*/src/airflow/providers/.*\.py$
+
+"""#
+        exclude = #"^providers/standard/.*/.*\.py$"#
+        check = #"from airflow\.models\.baseoperator import.* BaseOperator {{files}}"#
+    }
+    // Name: Check providers import hook lineage code from compat
+    ["check-get-lineage-collector-providers"] {
+        glob = #"^providers/.*/src/airflow/providers/.*\.py$"#
+        exclude = #"^providers/common/compat/src/airflow/providers/common/compat/.*\.py$"#
+        check = #"./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.lineage\.hook' --message "Only TYPE_CHECKING imports from `airflow.lineage.hook` are allowed in providers." --only_top_level {{files}}"#
+    }
+    // Name: Check @task decorator implements custom_operator_name
+    ["check-decorated-operator-implements-custom-name"] {
+        glob = #"^airflow-core/src/airflow/.*\.py$"#
+        check = "./scripts/ci/prek/decorator_operator_implements_custom_name.py {{files}}"
+    }
+    // Name: Verify usage of Airflow deprecation classes in core
+    ["check-core-deprecation-classes"] {
+        glob = #"\.py$"#
+        exclude = #"^airflow-core/src/airflow/configuration\.py$|^airflow-core/tests/.*$|^providers/.*/src/airflow/providers/|^scripts/in_container/verify_providers\.py$|^providers/.*/tests/.*$|^devel-common/"#
+        check = "category=DeprecationWarning|category=PendingDeprecationWarning {{files}}"
+    }
+    // Name: Check session util imports
+    ["check-provide-create-sessions-imports"] {
+        glob = #"\.py$"#
+        check = #"from airflow\.utils\.db import.* (NEW_SESSION|provide_session|create_session) {{files}}"#
+    }
+    // Name: Make sure LoggingMixin is not used alone
+    ["check-incorrect-use-of-LoggingMixin"] {
+        glob = #"\.py$"#
+        check = #"LoggingMixin\(\) {{files}}"#
+    }
+    // Name: start_date not in default_args
+    ["check-start-date-not-used-in-defaults"] {
+        glob = #"\.*example_dags.*\.py$"#
+        check = #"default_args\s*=\s*{\s*("|')start_date("|')|("|')start_date("|'): {{files}}"#
+    }
+    // Name: Check if licenses are OK for Apache
+    ["check-apache-license-rat"] {
+        glob = "^LICENSE$"
+        check = "./scripts/ci/prek/check_license.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check if aiobotocore is an optional dependency only
+    ["check-aiobotocore-optional"] {
+        glob = #"^providers/.*/provider\.yaml$"#
+        check = "./scripts/ci/prek/check_aiobotocore_optional.py {{files}}"
+    }
+    // Name: Checks for Boring Cyborg configuration consistency
+    ["check-boring-cyborg-configuration"] {
+        check = "./scripts/ci/prek/boring_cyborg.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Sort INTHEWILD.md alphabetically
+    ["update-in-the-wild-to-be-sorted"] {
+        glob = #"^\.pre-commit-config\.yaml$|^INTHEWILD\.md$"#
+        check = "./scripts/ci/prek/sort_in_the_wild.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Sort and uniquify installed_providers.txt
+    ["update-installed-providers-to-be-sorted"] {
+        glob = #"^\.pre-commit-config\.yaml$|^.*_installed_providers\.txt$"#
+        check = "./scripts/ci/prek/sort_installed_providers.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Sort spelling_wordlist.txt
+    ["update-spelling-wordlist-to-be-sorted"] {
+        glob = #"^\.pre-commit-config\.yaml$|^docs/spelling_wordlist\.txt$"#
+        check = "./scripts/ci/prek/sort_spelling_wordlist.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Lint Helm Chart
+    ["lint-helm-chart"] {
+        glob = "^chart"
+        check = "./scripts/ci/prek/lint_helm.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Validate chart annotations
+    ["validate-chart-annotations"] {
+        glob = #"^chart/Chart\.yaml$"#
+        check = "./scripts/ci/prek/validate_chart_annotations.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Kubeconform check on our helm chart
+    ["kubeconform"] {
+        glob = "^chart"
+        check = "./scripts/ci/prek/check_kubeconform.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check Shell scripts syntax correctness
+    ["shellcheck"] {
+        glob = #"\.(bash|sh)$|^hooks/build$|^hooks/push$"#
+        exclude = "^dev/breeze/autocomplete/.*$"
+        check = "koalaman/shellcheck:v0.8.0 -x -a {{files}}"
+    }
+    // Name: Compile ui assets (manual)
+    ["compile-ui-assets"] {
+        glob = "^airflow-core/src/airflow/ui/|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/"
+        prefix = "mise x pipx:pnpm@9.7.1 --"
+        check = "./scripts/ci/prek/compile_ui_assets.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Compile FAB provider assets
+    ["compile-fab-assets"] {
+        glob = "^providers/fab/.*/www/"
+        prefix = "mise x pipx:yarn@1.22.21 --"
+        check = "./scripts/ci/prek/compile_provider_assets.py fab"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Compile Edge provider assets
+    ["compile-edge-assets"] {
+        glob = "^providers/edge3/.*/www/"
+        prefix = "mise x pipx:yarn@1.22.21 --"
+        check = "./scripts/ci/prek/compile_provider_assets.py edge"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Compile ui assets in dev mode (manual)
+    ["compile-ui-assets-dev"] {
+        glob = "^airflow-core/src/airflow/ui/|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/"
+        prefix = "mise x pipx:pnpm@9.7.1 --"
+        check = "./scripts/ci/prek/compile_ui_assets_dev.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Provider subpackage init files are there
+    ["check-providers-subpackages-init-file-exist"] {
+        check = "./scripts/ci/prek/check_providers_subpackages_all_have_init.py"
+        // pass_filenames was false in pre-commit
+        // always_run was true in pre-commit
+    }
+    // Name: Sync integrations list with docs
+    ["check-integrations-list-consistent"] {
+        glob = #"^scripts/ci/docker-compose/integration-.*\.yml$|^contributing-docs/testing/integration_tests\.rst$"#
+        check = "./scripts/ci/prek/check_integrations_list.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Update Breeze README.md with config files hash
+    ["update-breeze-readme-config-hash"] {
+        glob = #"^dev/breeze/pyproject\.toml$|^dev/breeze/README\.md$"#
+        check = "./scripts/ci/prek/update_breeze_config_hash.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Update Airflow's meta-package pyproject.toml
+    ["update-pyproject-toml"] {
+        glob = #"""
+(?x) ^.*/pyproject\.toml$| ^scripts/ci/prek/update_airflow_pyproject_toml\.py$| ^providers/.*/pyproject\.toml$| ^providers/.*/provider\.yaml$
+
+"""#
+        check = "./scripts/ci/prek/update_airflow_pyproject_toml.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Update Source Date Epoch for reproducible builds
+    ["update-reproducible-source-date-epoch"] {
+        glob = #"^RELEASE_NOTES\.rst$|^chart/RELEASE_NOTES\.rst$"#
+        check = "./scripts/ci/prek/update_source_date_epoch.py {{files}}"
+    }
+    // Name: Check top-level breeze deps
+    ["check-breeze-top-dependencies-limited"] {
+        glob = "^dev/breeze/.*$"
+        check = "./scripts/tools/check_if_limited_dependencies.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check if tests are in the right folders
+    ["check-tests-in-the-right-folders"] {
+        glob = #"^airflow-core/tests/.*\.py$"#
+        check = "./scripts/ci/prek/check_tests_in_right_folders.py {{files}}"
+    }
+    // Name: Check if system tests have required segments of code
+    ["check-system-tests-present"] {
+        glob = #"^.*/tests/system/.*/example_[^/]*\.py$"#
+        check = "./scripts/ci/prek/check_system_tests.py {{files}}"
+    }
+    // Name: Generate PyPI README
+    ["generate-pypi-readme"] {
+        glob = #"^README\.md$"#
+        check = "./scripts/ci/prek/generate_pypi_readme.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Run markdownlint
+    ["lint-markdown"] {
+        glob = #"\.(md|mdown|markdown)$"#
+        prefix = "mise x pipx:markdownlint-cli@0.38.0 --"
+        check = "markdownlint {{files}}"
+    }
+    // Name: Lint JSON Schema files
+    ["lint-json-schema"] {
+        glob = #".*\.schema\.json$"#
+        check = "./scripts/ci/prek/lint_json_schema.py {{files}}"
+        // args from pre-commit: --spec-file scripts/ci/prek/draft7_schema.json
+        // Consider adding args to check command
+    }
+    // Original ID: lint-json-schema
+    // Name: Lint NodePort Service
+    ["lint-json-schema-2"] {
+        glob = #"^scripts/ci/kubernetes/nodeport\.yaml$"#
+        check = "./scripts/ci/prek/lint_json_schema.py {{files}}"
+        // args from pre-commit: --spec-url https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.20.2-standalone/service-v1.json
+        // Consider adding args to check command
+    }
+    // Original ID: lint-json-schema
+    // Name: Lint Docker compose files
+    ["lint-json-schema-3"] {
+        glob = #"^scripts/ci/docker-compose/.+\.ya?ml$|docker-compose\.ya?ml$"#
+        exclude = #"""
+(?x) ^scripts/ci/docker-compose/grafana/.| ^scripts/ci/docker-compose/gremlin/.| ^scripts/ci/docker-compose/.+-config\.ya?ml$
+
+"""#
+        check = "./scripts/ci/prek/lint_json_schema.py {{files}}"
+        // args from pre-commit: --spec-url https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+        // Consider adding args to check command
+    }
+    // Original ID: lint-json-schema
+    // Name: Lint chart/values.schema.json
+    ["lint-json-schema-4"] {
+        glob = #"^chart/values\.schema\.json$|^chart/values_schema\.schema\.json$"#
+        check = "./scripts/ci/prek/lint_json_schema.py"
+        // pass_filenames was false in pre-commit
+        // args from pre-commit: --spec-file chart/values_schema.schema.json chart/values.schema.json
+        // Consider adding args to check command
+    }
+    // Name: Vendor k8s definitions into values.schema.json
+    ["update-vendored-in-k8s-json-schema"] {
+        glob = #"^chart/values\.schema\.json$"#
+        check = "./scripts/ci/prek/vendor_k8s_json_schema.py {{files}}"
+    }
+    // Original ID: lint-json-schema
+    // Name: Lint chart/values.yaml
+    ["lint-json-schema-5"] {
+        glob = #"^chart/values\.yaml$|^chart/values\.schema\.json$"#
+        check = "./scripts/ci/prek/lint_json_schema.py"
+        // pass_filenames was false in pre-commit
+        // args from pre-commit: --enforce-defaults --spec-file chart/values.schema.json chart/values.yaml
+        // Consider adding args to check command
+    }
+    // Original ID: lint-json-schema
+    // Name: Lint config_templates/config.yml
+    ["lint-json-schema-6"] {
+        glob = #"^airflow-core/src/airflow/config_templates/config\.yml$"#
+        check = "./scripts/ci/prek/lint_json_schema.py {{files}}"
+        // args from pre-commit: --spec-file airflow-core/src/airflow/config_templates/config.yml.schema.json
+        // Consider adding args to check command
+    }
+    // Name: Check persistent creds in workflow files
+    ["check-persist-credentials-disabled-in-github-workflows"] {
+        glob = #"^\.github/workflows/.*\.yml$"#
+        check = "./scripts/ci/prek/checkout_no_credentials.py {{files}}"
+    }
+    // Name: Check that docstrings do not specify param types
+    ["check-docstring-param-types"] {
+        glob = #"\.py$"#
+        check = "./scripts/ci/prek/docstring_param_type.py {{files}}"
+    }
+    // Name: Check no zip files are committed
+    ["check-zip-file-is-not-committed"] {
+        glob = #"\.zip$"#
+        check = #"""
+Zip files are not allowed in the repository as they are hard to
+track and have security implications. Please remove the zip file from the repository.
+ {{files}}
+"""#
+    }
+    // Name: Check deprecations categories in decorators
+    ["check-code-deprecations"] {
+        glob = #"^airflow-core/src/airflow/.*\.py$"#
+        check = "./scripts/ci/prek/check_deprecations.py {{files}}"
+    }
+    // Name: Lint chart/values.schema.json file
+    ["lint-chart-schema"] {
+        glob = #"^chart/values\.schema\.json$"#
+        check = "./scripts/ci/prek/chart_schema.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Inline Dockerfile and Dockerfile.ci scripts
+    ["update-inlined-dockerfile-scripts"] {
+        glob = #"^Dockerfile$|^Dockerfile\.ci$|^scripts/docker/.*$"#
+        check = "./scripts/ci/prek/inline_scripts_in_docker.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check changelogs for duplicate entries
+    ["check-changelog-has-no-duplicates"] {
+        glob = #"changelog\.(rst|txt)$"#
+        check = "./scripts/ci/prek/changelog_duplicates.py {{files}}"
+    }
+    // Name: Check changelog format
+    ["check-changelog-format"] {
+        glob = #"changelog\.(rst|txt)$"#
+        check = "./scripts/ci/prek/check_changelog_format.py {{files}}"
+    }
+    // Name: Check newsfragments are valid
+    ["check-newsfragments-are-valid"] {
+        glob = #"newsfragments/.*\.rst$"#
+        check = "./scripts/ci/prek/newsfragments.py {{files}}"
+        // always_run was true in pre-commit
+    }
+    // Name: Check significant newsfragments are valid
+    ["check-significant-newsfragments-are-valid"] {
+        glob = #"^airflow-core/newsfragments/.*\.rst$"#
+        check = "./scripts/ci/prek/significant_newsfragments_checker.py"
+        // pass_filenames was false in pre-commit
+        // always_run was true in pre-commit
+    }
+    // Name: Update breeze docs
+    ["update-breeze-cmd-output"] {
+        glob = #"""
+(?x) ^dev/breeze/.*$| ^\.pre-commit-config\.yaml$| ^scripts/ci/prek/breeze_cmd_line\.py$| ^generated/provider_dependencies\.json$
+
+"""#
+        check = "./scripts/ci/prek/breeze_cmd_line.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check that example dags url include provider versions
+    ["check-example-dags-urls"] {
+        glob = #"^airflow-core/docs/.*example-dags\.rst$|^docs/.*index\.rst$^airflow-core/docs/.*index\.rst$"#
+        check = "./scripts/ci/prek/update_example_dags_paths.py {{files}}"
+        // always_run was true in pre-commit
+    }
+    // Name: Check that system tests is properly added
+    ["check-system-tests-tocs"] {
+        glob = #"^providers/.*/docs/index\.rst$"#
+        check = "./scripts/ci/prek/check_system_tests_hidden_in_index.py {{files}}"
+    }
+    // Name: Check that all logging methods are lazy
+    ["check-lazy-logging"] {
+        glob = #"\.py$"#
+        check = "./scripts/ci/prek/check_lazy_logging.py {{files}}"
+    }
+    // Name: Create missing init.py files in tests
+    ["create-missing-init-py-files-tests"] {
+        glob = #"^airflow-core/tests/.*\.py$"#
+        check = "./scripts/ci/prek/check_init_in_tests.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Unit tests do not inherit from unittest.TestCase
+    ["check-tests-unittest-testcase"] {
+        glob = #"^airflow-core/tests/.*\.py$"#
+        check = "./scripts/ci/prek/unittest_testcase.py {{files}}"
+    }
+    // Name: Validate provider doc files
+    ["check-provider-docs-valid"] {
+        glob = #"^providers/.*/provider\.yaml$|^.*/docs/.*"#
+        check = "./scripts/ci/prek/check_provider_docs.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: bandit
+    ["bandit"] {
+        glob = "^airflow-core/src/airflow/.*"
+        exclude = "airflow/example_dags/.*"
+        prefix = "mise x pipx:bandit@1.7.6 --"
+        check = "bandit {{files}}"
+        // args from pre-commit: --skip B101,B301,B324,B403,B404,B603 --severity-level high
+        // Consider adding args to check command
+    }
+    // Name: pylint
+    ["pylint"] {
+        glob = "^airflow-core/src/airflow/.*"
+        exclude = "airflow/example_dags/.*"
+        prefix = "mise x pipx:pylint@3.1.0 --"
+        check = "pylint {{files}}"
+        // args from pre-commit: --disable=all --enable=W0133
+        // Consider adding args to check command
+    }
+    // Name: Check no migration is done on FAB related table
+    ["check-fab-migrations"] {
+        glob = #"^airflow-core/src/airflow/migrations/versions/.*\.py$"#
+        exclude = "^airflow-core/src/airflow/migrations/versions/0028_3_0_0_drop_ab_user_id_foreign_key.py$"
+        check = #"""
+(?ix) \bab_permission\b| \bab_view_menu\b| \bab_role\b| \bab_permission_view\b| \bab_permission_view_role\b| \bab_user\b| \bab_user_role\b| \bab_register_user\b
+ {{files}}
+"""#
+    }
+    // Name: Compile / format / lint UI
+    ["ts-compile-lint-ui"] {
+        glob = #"""
+(?x)
+^airflow-core/src/airflow/ui/.*\.(js|ts|tsx|yaml|css|json)$|
+^airflow-core/src/airflow/api_fastapi/core_api/openapi/.*\.yaml$|
+^airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/v1.*\.yaml$
+
+"""#
+        exclude = #"""
+(?x)
+^airflow-core/src/airflow/ui/node-modules/.*|
+^airflow-core/src/airflow/ui/.pnpm-store
+
+"""#
+        prefix = "mise x pipx:pnpm@9.7.1 --"
+        check = "./scripts/ci/prek/ts_compile_lint_ui.py {{files}}"
+    }
+    // Name: Compile / format / lint simple auth manager UI
+    ["ts-compile-lint-simple-auth-manager-ui"] {
+        glob = #"""
+(?x)
+^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/.*\.(js|ts|tsx|yaml|css|json)$|
+^airflow-core/src/airflow/api_fastapi/core_api/openapi/.*\.yaml$|
+^airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/.*\.yaml$
+
+"""#
+        exclude = #"""
+(?x)
+^airflow-core/src/airflow/api_fastapi/node-modules/.*|
+^airflow-core/src/airflow/api_fastapi/.pnpm-store
+
+"""#
+        prefix = "mise x pipx:pnpm@9.7.1 --"
+        check = "./scripts/ci/prek/ts_compile_lint_simple_auth_manager_ui.py {{files}}"
+    }
+    // Name: Compile / format / lint edge UI
+    ["ts-compile-lint-edge-ui"] {
+        glob = #"""
+(?x)
+^providers/edge3/src/airflow/providers/edge3/plugins/www/.*\.(js|ts|tsx|yaml|css|json)$|
+^providers/edge3/src/airflow/providers/edge3/openapi/v2-edge-generated.yaml$
+
+"""#
+        exclude = #"""
+(?x)
+^providers/edge3/src/airflow/providers/edge3/plugins/www/node-modules/.*|
+^providers/edge3/src/airflow/providers/edge3/plugins/www/.pnpm-store
+
+"""#
+        prefix = "mise x pipx:pnpm@9.7.1 --"
+        check = "./scripts/ci/prek/ts_compile_lint_edge.py {{files}}"
+    }
+    // Name: Run mypy for dev
+    ["mypy-dev"] {
+        glob = #"^dev/.*\.py$|^scripts/.*\.py$"#
+        check = "./scripts/ci/prek/mypy.py {{files}}"
+    }
+    // Original ID: mypy-dev
+    // Name: Run mypy for dev (manual)
+    ["mypy-dev-2"] {
+        glob = #"^.*\.py$"#
+        check = "./scripts/ci/prek/mypy_folder.py dev"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Run mypy for airflow-core
+    ["mypy-airflow-core"] {
+        glob = #"^airflow-core/.*\.py$"#
+        check = "./scripts/ci/prek/mypy.py {{files}}"
+    }
+    // Original ID: mypy-airflow-core
+    // Name: Run mypy for airflow-core (manual)
+    ["mypy-airflow-core-2"] {
+        glob = #"^airflow-core/.*\.py$"#
+        check = "./scripts/ci/prek/mypy_folder.py airflow-core"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Run mypy for providers
+    ["mypy-providers"] {
+        glob = #"^providers/.*\.py$"#
+        check = "./scripts/ci/prek/mypy.py {{files}}"
+    }
+    // Original ID: mypy-providers
+    // Name: Run mypy for providers (manual)
+    ["mypy-providers-2"] {
+        glob = #"^.*\.py$"#
+        check = "./scripts/ci/prek/mypy_folder.py providers"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Run mypy for task-sdk
+    ["mypy-task-sdk"] {
+        glob = #"^task-sdk/.*\.py$"#
+        check = "./scripts/ci/prek/mypy.py {{files}}"
+    }
+    // Original ID: mypy-task-sdk
+    // Name: Run mypy for task-sdk (manual)
+    ["mypy-task-sdk-2"] {
+        glob = #"^.*\.py$"#
+        check = "./scripts/ci/prek/mypy_folder.py task-sdk"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Run mypy for devel-common
+    ["mypy-devel-common"] {
+        glob = #"^devel-common/.*\.py$"#
+        check = "./scripts/ci/prek/mypy.py {{files}}"
+    }
+    // Original ID: mypy-devel-common
+    // Name: Run mypy for devel-common (manual)
+    ["mypy-devel-common-2"] {
+        glob = #"^.*\.py$"#
+        check = "./scripts/ci/prek/mypy_folder.py devel-common"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Run mypy for airflow-ctl
+    ["mypy-airflow-ctl"] {
+        glob = #"^airflow-ctl/src/airflowctl/.*\.py$|^airflow-ctl/tests/.*\.py$"#
+        exclude = ".*generated.py"
+        check = "./scripts/ci/prek/mypy.py {{files}}"
+    }
+    // Original ID: mypy-airflow-ctl
+    // Name: Run mypy for airflow-ctl (manual)
+    ["mypy-airflow-ctl-2"] {
+        glob = #"^.*\.py$"#
+        check = "./scripts/ci/prek/mypy_folder.py airflow-ctl"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Generate the FastAPI API spec
+    ["generate-openapi-spec"] {
+        glob = #"^airflow-core/src/airflow/api_fastapi/.*\.py$|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/.*\.py$|^providers/fab/src/airflow/providers/fab/auth_manager/api_fastapi/.*\.py$"#
+        exclude = "^airflow-core/src/airflow/api_fastapi/execution_api/.*"
+        check = "./scripts/ci/prek/generate_openapi_spec.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Generate the FastAPI API spec for FAB
+    ["generate-openapi-spec-fab"] {
+        glob = #"^providers/fab/src/airflow/providers/fab/auth_manager/api_fastapi/.*\.py$"#
+        check = "./scripts/ci/prek/generate_openapi_spec_providers.py fab"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Generate the FastAPI API spec for Edge
+    ["generate-openapi-spec-edge"] {
+        glob = #"^providers/edge3/src/airflow/providers/edge3/worker_api/.*\.py$"#
+        check = "./scripts/ci/prek/generate_openapi_spec_providers.py edge"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Generate the FastAPI API spec for Keycloak
+    ["generate-openapi-spec-keycloak"] {
+        glob = #"^providers/keycloak/src/airflow/providers/keycloak/auth_manager/.*\.py$"#
+        check = "./scripts/ci/prek/generate_openapi_spec_providers.py keycloak"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check i18n files validity
+    ["check-i18n-json"] {
+        glob = #"^airflow-core/src/airflow/ui/public/i18n/locales/.*\.json$"#
+        check = "./scripts/ci/prek/check_i18n_json.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Validate provider.yaml files
+    ["check-provider-yaml-valid"] {
+        glob = #"^providers/.*/provider\.yaml$"#
+        exclude = "^providers/.*/.venv/.*$"
+        check = "./scripts/ci/prek/check_provider_yaml_files.py {{files}}"
+    }
+    // Name: Check templated fields mapped in operators/sensors
+    ["check-template-fields-valid"] {
+        glob = #"^(providers/.*/)?airflow-core/.*/(sensors|operators)/.*\.py$"#
+        check = "./scripts/ci/prek/check_template_fields.py {{files}}"
+    }
+    // Name: Update migration ref doc
+    ["update-migration-references"] {
+        glob = #"^airflow-core/src/airflow/migrations/versions/.*\.py$|^airflow-core/docs/migrations-ref\.rst$"#
+        check = "./scripts/ci/prek/migration_reference.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Generate Datamodels for TaskSDK client
+    ["generate-tasksdk-datamodels"] {
+        glob = #"^airflow-core/src/airflow/api_fastapi/execution_api/.*\.py$"#
+        check = "uv run -p 3.12 --no-progress --active --group codegen --project apache-airflow-task-sdk --directory task-sdk -s dev/generate_task_sdk_models.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Generate Datamodels for AirflowCTL
+    ["generate-airflowctl-datamodels"] {
+        glob = #"^airflow-core/src/airflow/api_fastapi/core_api/datamodels/.*\.py$|^airflow-core/src/airflow/api_fastapi/auth/managers/simple/(datamodels|routes|services|openapi)/.*\.py$"#
+        check = #"""
+bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --project apache-airflow-ctl --directory airflow-ctl/ datamodel-codegen &&
+ uv run -p 3.12 --no-dev --no-progress --active --group codegen --project apache-airflow-ctl --directory airflow-ctl/ datamodel-codegen --input="../airflow-core/src/airflow/api_fastapi/auth/managers/simple/openapi/v2-simple-auth-manager-generated.yaml" --output="src/airflowctl/api/datamodels/auth_generated.py"'
+
+"""#
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Update ER diagram
+    ["update-er-diagram"] {
+        glob = #"^airflow-core/src/airflow/migrations/versions/.*\.py$|^airflow-core/docs/migrations-ref\.rst$"#
+        check = "./scripts/ci/prek/update_er_diagram.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check the default configuration
+    ["check-default-configuration"] {
+        glob = #"^airflow-core/src/airflow/config_templates/config\.yml$"#
+        check = "./scripts/ci/prek/check_default_configuration.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Generate SVG from Airflow CTL Commands
+    ["generate-airflowctl-help-images"] {
+        glob = #"^airflow-ctl/src/airflowctl/ctl/cli_config.py$|airflow-ctl/src/airflowctl/api/operations.py|airflow-ctl/src/airflowctl/ctl/commands/.*\.py"#
+        check = "./scripts/ci/prek/capture_airflowctl_help.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check imports in providers
+    ["check-imports-in-providers"] {
+        glob = #"^providers/.*/src/airflow/providers/.*version_compat.*\.py$"#
+        check = "./scripts/ci/prek/check_imports_in_providers.py {{files}}"
+    }
+    // Name: Check for correct version_compat imports in providers
+    ["provider-version-compat"] {
+        glob = #"^providers/.*/src/airflow/providers/.*\.py$"#
+        check = "./scripts/ci/prek/check_provider_version_compat.py {{files}}"
+    }
+    // Name: No AIRFLOW_V_* imports in airflow-core
+    ["check-airflow-version-checks-in-core"] {
+        glob = #"^airflow-core/.*\.py$"#
+        exclude = #"""
+(?x) ^airflow-core/tests/integration/otel/dags/otel_test_dag_with_pause_between_tasks\.py$| ^airflow-core/tests/integration/otel/dags/otel_test_dag_with_pause_in_task\.py$| ^airflow-core/tests/integration/otel/test_otel\.py$| ^airflow-core/tests/unit/core/test_configuration\.py$| ^airflow-core/tests/unit/models/test_renderedtifields\.py$| ^airflow-core/tests/unit/models/test_variable\.py$
+
+"""#
+        check = "import AIRFLOW_V_ {{files}}"
+    }
+    // Name: Check for SDK imports in core files
+    ["check-sdk-imports"] {
+        glob = "^airflow-core/src/airflow/"
+        exclude = #"""
+(?x)
+# Allow SDK imports in these legitimate locations
+^airflow-core/src/airflow/example_dags/.*\.py$|
+
+# TODO: These files need to be refactored to remove SDK coupling
+^airflow-core/src/airflow/__init__\.py$|
+^airflow-core/src/airflow/api/common/mark_tasks\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/datamodels/assets\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/datamodels/connections\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/datamodels/hitl\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/datamodels/variables\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/routes/ui/grid\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/routes/ui/structure\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/services/public/connections\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/services/ui/connections\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/services/ui/grid\.py$|
+^airflow-core/src/airflow/api_fastapi/core_api/services/ui/task_group.py$|
+^airflow-core/src/airflow/api_fastapi/execution_api/routes/hitl\.py$|
+^airflow-core/src/airflow/api_fastapi/execution_api/routes/task_instances\.py$|
+^airflow-core/src/airflow/api_fastapi/logging/decorators\.py$|
+^airflow-core/src/airflow/assets/evaluation\.py$|
+^airflow-core/src/airflow/assets/manager\.py$|
+^airflow-core/src/airflow/cli/commands/connection_command\.py$|
+^airflow-core/src/airflow/cli/commands/task_command\.py$|
+^airflow-core/src/airflow/cli/commands/triggerer_command.py$|
+^airflow-core/src/airflow/configuration\.py$|
+^airflow-core/src/airflow/dag_processing/collection\.py$|
+^airflow-core/src/airflow/dag_processing/manager\.py$|
+^airflow-core/src/airflow/dag_processing/processor\.py$|
+^airflow-core/src/airflow/dag_processing/dagbag\.py$|
+^airflow-core/src/airflow/datasets/metadata\.py$|
+^airflow-core/src/airflow/exceptions\.py$|
+^airflow-core/src/airflow/executors/local_executor\.py$|
+^airflow-core/src/airflow/jobs/triggerer_job_runner\.py$|
+^airflow-core/src/airflow/lineage/hook\.py$|
+^airflow-core/src/airflow/listeners/spec/asset\.py$|
+^airflow-core/src/airflow/listeners/spec/taskinstance\.py$|
+^airflow-core/src/airflow/logging/remote\.py$|
+^airflow-core/src/airflow/models/__init__\.py$|
+^airflow-core/src/airflow/models/asset\.py$|
+^airflow-core/src/airflow/models/baseoperator\.py$|
+^airflow-core/src/airflow/models/connection\.py$|
+^airflow-core/src/airflow/models/dag\.py$|
+^airflow-core/src/airflow/models/dagrun\.py$|
+^airflow-core/src/airflow/models/deadline\.py$|
+^airflow-core/src/airflow/models/expandinput\.py$|
+^airflow-core/src/airflow/models/mappedoperator\.py$|
+^airflow-core/src/airflow/models/operator\.py$|
+^airflow-core/src/airflow/models/param\.py$|
+^airflow-core/src/airflow/models/renderedtifields\.py$|
+^airflow-core/src/airflow/models/serialized_dag\.py$|
+^airflow-core/src/airflow/models/taskinstance\.py$|
+^airflow-core/src/airflow/models/taskinstancekey\.py$|
+^airflow-core/src/airflow/models/taskmap\.py$|
+^airflow-core/src/airflow/models/taskmixin\.py$|
+^airflow-core/src/airflow/models/taskreschedule\.py$|
+^airflow-core/src/airflow/models/variable\.py$|
+^airflow-core/src/airflow/models/xcom\.py$|
+^airflow-core/src/airflow/models/xcom_arg\.py$|
+^airflow-core/src/airflow/operators/subdag\.py$|
+^airflow-core/src/airflow/plugins_manager\.py$|
+^airflow-core/src/airflow/providers_manager\.py$|
+^airflow-core/src/airflow/serialization/definitions/[_a-z]+\.py$|
+^airflow-core/src/airflow/serialization/enums\.py$|
+^airflow-core/src/airflow/serialization/helpers\.py$|
+^airflow-core/src/airflow/serialization/serialized_objects\.py$|
+^airflow-core/src/airflow/settings\.py$|
+^airflow-core/src/airflow/task/task_runner/bash_task_runner\.py$|
+^airflow-core/src/airflow/task/task_runner/standard_task_runner\.py$|
+^airflow-core/src/airflow/ti_deps/deps/mapped_task_upstream_dep\.py$|
+^airflow-core/src/airflow/ti_deps/deps/prev_dagrun_dep\.py$|
+^airflow-core/src/airflow/ti_deps/deps/trigger_rule_dep\.py$|
+^airflow-core/src/airflow/timetables/assets\.py$|
+^airflow-core/src/airflow/timetables/base\.py$|
+^airflow-core/src/airflow/timetables/simple\.py$|
+^airflow-core/src/airflow/utils/cli\.py$|
+^airflow-core/src/airflow/utils/context\.py$|
+^airflow-core/src/airflow/utils/dag_cycle_tester\.py$|
+^airflow-core/src/airflow/utils/dag_edges\.py$|
+^airflow-core/src/airflow/utils/dag_parsing_context\.py$|
+^airflow-core/src/airflow/utils/decorators\.py$|
+^airflow-core/src/airflow/utils/dot_renderer\.py$|
+^airflow-core/src/airflow/utils/edgemodifier\.py$|
+^airflow-core/src/airflow/utils/email\.py$|
+^airflow-core/src/airflow/utils/helpers\.py$|
+^airflow-core/src/airflow/utils/operator_helpers\.py$|
+^airflow-core/src/airflow/utils/session\.py$|
+^airflow-core/src/airflow/utils/task_group\.py$|
+^airflow-core/src/airflow/utils/trigger_rule\.py$|
+^airflow-core/src/airflow/utils/types\.py$
+
+"""#
+        check = "./scripts/ci/prek/check_sdk_imports.py {{files}}"
+    }
+    // Name: Check schema defaults match server-side defaults
+    ["check-schema-defaults"] {
+        glob = #"^airflow-core/src/airflow/serialization/schema\.json$|^airflow-core/src/airflow/serialization/serialized_objects\.py$"#
+        check = "./scripts/ci/prek/check_schema_defaults.py"
+        // pass_filenames was false in pre-commit
+    }
+    // Name: Check for problematic context manager class decorators
+    ["check-contextmanager-class-decorators"] {
+        glob = #".*test.*\.py$"#
+        check = "./scripts/ci/prek/check_contextmanager_class_decorators.py {{files}}"
+    }
+}
+
+local custom_steps = new Mapping<String, Step> {
+    // Repo: https://github.com/thlorenz/doctoc.git @ 70fdcd39ef919754011a827bd25f23a0b141c3c3
+    // Name: Add TOC for Markdown and RST files
+    ["doctoc"] {
+        // files: (?x) ^README\.md$| ^UPDATING.*\.md$| ^chart/UPDATING.*\.md$| ^dev/.*\.md$| ^dev/.*\.rst$| ^docs/README\.md$| ^\.github/.*\.md$| ^airflow-core/tests/system/README\.md$
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --maxlevel 2
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Name: Add license for all SQL files
+    ["insert-license"] {
+        exclude = #"""
+(?x)
+^\.github/
+
+"""#
+        // files: \.sql$
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style /*||*/ --license-filepath scripts/ci/license-templates/LICENSE.txt --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Original ID: insert-license
+    // Name: Add license for all RST files
+    ["insert-license-2"] {
+        exclude = #"^\.github/.*$|newsfragments/.*\.rst$"#
+        // files: \.rst$
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style || --license-filepath scripts/ci/license-templates/LICENSE.rst --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Original ID: insert-license
+    // Name: Add license for CSS/JS/JSX/PUML/TS/TSX
+    ["insert-license-3"] {
+        exclude = #"^\.github/.*$|ui/openapi-gen/|www/openapi-gen/|.*/dist/.*"#
+        // files: \.(css|jsx?|puml|tsx?)$
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style /*!| *| */ --license-filepath scripts/ci/license-templates/LICENSE.txt --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Original ID: insert-license
+    // Name: Add license for all Shell files
+    ["insert-license-4"] {
+        exclude = #"^\.github/.*$|^dev/breeze/autocomplete/.*$"#
+        // files: \.bash$|\.sh$
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style |#| --license-filepath scripts/ci/license-templates/LICENSE.txt --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Original ID: insert-license
+    // Name: Add license for all toml files
+    ["insert-license-5"] {
+        exclude = #"^\.github/.*$|^dev/breeze/autocomplete/.*$"#
+        // files: \.toml$
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style |#| --license-filepath scripts/ci/license-templates/LICENSE.txt --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Original ID: insert-license
+    // Name: Add license for all Python files
+    ["insert-license-6"] {
+        exclude = #"^\.github/.*$|^.*/_vendor/.*$|^airflow-ctl/.*/.*generated\.py$"#
+        // files: \.py$|\.pyi$
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style |#| --license-filepath scripts/ci/license-templates/LICENSE.txt --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Original ID: insert-license
+    // Name: Add license for all XML files
+    ["insert-license-7"] {
+        exclude = #"^\.github/.*$"#
+        // files: \.xml$
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style <!--||--> --license-filepath scripts/ci/license-templates/LICENSE.txt --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Original ID: insert-license
+    // Name: Add license for all Helm template files
+    ["insert-license-8"] {
+        // files: ^chart/templates/.*
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style {{/*||*/}} --license-filepath scripts/ci/license-templates/LICENSE.txt --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Original ID: insert-license
+    // Name: Add license for all YAML files except Helm templates
+    ["insert-license-9"] {
+        exclude = #"""
+(?x) ^\.github/.*$|^chart/templates/.*| .*reproducible_build\.yaml$| ^.*/v2.*\.yaml$| ^.*/openapi/_private_ui.*\.yaml$| ^.*/pnpm-lock\.yaml$| .*-generated\.yaml$
+
+"""#
+        // files: \.ya?ml$
+        // File type filtering needed
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style |#| --license-filepath scripts/ci/license-templates/LICENSE.txt --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Original ID: insert-license
+    // Name: Add license for all Markdown files
+    ["insert-license-10"] {
+        exclude = #"PROVIDER_CHANGES.*\.md$"#
+        // files: \.md$
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style <!--|| --> --license-filepath scripts/ci/license-templates/LICENSE.txt --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/Lucas-C/pre-commit-hooks @ abdd8b62891099da34162217ecb3872d22184a51
+    // Original ID: insert-license
+    // Name: Add license for all other files
+    ["insert-license-11"] {
+        exclude = #"^\.github/.*$"#
+        // files: \.cfg$|\.conf$|\.ini$|\.ldif$|\.properties$|\.service$|\.tf$|Dockerfile.*$
+
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --comment-style |#| --license-filepath scripts/ci/license-templates/LICENSE.txt --fuzzy-match-generates-todo
+    }
+    // Repo: https://github.com/adamchainz/blacken-docs @ dda8db18cfc68df532abf33b185ecd12d5b7b326
+    // Name: Run black on docs
+    ["blacken-docs"] {
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --line-length=110 --target-version=py310 --target-version=py311 --target-version=py312 --target-version=py313
+        // Dependencies: black==25.9.0
+    }
+    // Repo: https://github.com/pre-commit/pre-commit-hooks @ 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c
+    // Name: Require literal syntax when initializing builtins
+    ["check-builtin-literals"] {
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+    }
+    // Repo: https://github.com/pre-commit/pre-commit-hooks @ 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c
+    // Name: Check XML files with xmllint
+    ["check-xml"] {
+        exclude = #"""
+(?x) ^scripts/ci/docker-compose/gremlin/.
+
+"""#
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+    }
+    // Repo: https://github.com/pre-commit/pre-commit-hooks @ 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c
+    // Name: Format JSON files
+    ["pretty-format-json"] {
+        // files: ^chart/values\.schema\.json$|^chart/values_schema\.schema\.json$
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --autofix --no-sort-keys --indent 4
+    }
+    // Repo: https://github.com/pre-commit/pygrep-hooks @ 3a6eb0fadf60b3cccfd80bad9dbb6fae7e47b316
+    // Name: Check if RST files use double backticks for code
+    ["rst-backticks"] {
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+    }
+    // Repo: https://github.com/pre-commit/pygrep-hooks @ 3a6eb0fadf60b3cccfd80bad9dbb6fae7e47b316
+    // Name: Check if there are no deprecate log warn
+    ["python-no-log-warn"] {
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+    }
+    // Repo: https://github.com/ikamensh/flynt @ 97be693bf18bc2f050667dd282d243e2824b81e2
+    // Name: Run flynt string format converter for Python
+    ["flynt"] {
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --line-length 99999
+    }
+    // Repo: https://github.com/codespell-project/codespell @ 63c8f8312b7559622c0d82815639671ae42132ac
+    // Name: Run codespell
+    ["codespell"] {
+        exclude = #"""
+(?x) material-icons\.css$| ^images/.*$| ^RELEASE_NOTES\.txt$| ^.*package-lock\.json$| ^.*/kinglear\.txt$| ^.*pnpm-lock\.yaml$| .*/dist/.*| ^airflow-core/src/airflow/ui/public/i18n/locales/(?!en/).+/
+
+"""#
+        // File type filtering needed
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+        // Original args: --ignore-words=docs/spelling_wordlist.txt --skip=providers/.*/src/airflow/providers/*/*.rst,providers/*/docs/changelog.rst,docs/*/commits.rst,providers/*/docs/commits.rst,providers/*/*/docs/commits.rst,docs/apache-airflow/tutorial/pipeline_example.csv,*.min.js,*.lock,INTHEWILD.md,*.svg --exclude-file=.codespellignorelines
+    }
+    // Repo: https://github.com/woodruffw/zizmor-pre-commit @ 3c10df247c55cf21f75003105b879f145096bd4a
+    // Name: Run zizmor to check for github workflow syntax errors
+    ["zizmor"] {
+        // files: ^\.github/workflows/.*$|^\.github/actions/.*$
+        // File type filtering needed
+        // TODO: Configure check and/or fix commands
+        // check = "..."
+        // fix = "..."
+    }
+}
+
+hooks {
+    ["pre-push"] {
+        steps {
+            ...linters
+            ...local_hooks
+            ...custom_steps
+        }
+    }
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
+        steps {
+            ...linters
+            ...local_hooks
+            ...custom_steps
+        }
+    }
+    ["check"] {
+        steps {
+            ...linters
+            ...local_hooks
+            ...custom_steps
+        }
+    }
+    ["fix"] {
+        fix = true
+        steps {
+            ...linters
+            ...local_hooks
+        }
+    }
+}
