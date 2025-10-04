@@ -5,7 +5,7 @@ import "../pkl/Builtins.pkl"
 // pre-commit default_language_version:
 //   python: python3
 //   node: 22.19.0
-// 
+//
 // To set these versions with mise, run:
 //   mise use python@3
 //   mise use node@22.19.0
@@ -116,13 +116,13 @@ local local_hooks = new Mapping<String, Step> {
     ["check-airflow-k8s-not-used"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/.*\.py$"#)
         exclude = Types.Regex("^airflow-core/src/airflow/kubernetes/")
-        check = #"./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.kubernetes' --message "You should only import kubernetes code from `airflow.providers.cncf.kubernetes`." {{files}}"#
+        check = #"uv run ./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.kubernetes' --message "You should only import kubernetes code from `airflow.providers.cncf.kubernetes`." {{files}}"#
     }
     // Name: Check common.compat is used for OL deprecated classes
     ["check-common-compat-used-for-openlineage"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/.*\.py$"#)
         exclude = Types.Regex("(?x) ^airflow-core/src/airflow/openlineage/| ^airflow/providers/common/compat/openlineage/facet.py$")
-        check = #"./scripts/ci/prek/check_airflow_imports.py --pattern '^openlineage\.client\.(facet|run)' --message "You should import from `airflow.providers.common.compat.openlineage.facet` instead." {{files}}"#
+        check = #"uv run ./scripts/ci/prek/check_airflow_imports.py --pattern '^openlineage\.client\.(facet|run)' --message "You should import from `airflow.providers.common.compat.openlineage.facet` instead." {{files}}"#
     }
     // Name: Sort airflow-bug-report provider list
     ["check-airflow-providers-bug-report-template"] {
@@ -133,7 +133,7 @@ local local_hooks = new Mapping<String, Step> {
     ["check-cncf-k8s-only-for-executors"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/.*\.py$"#)
         exclude = Types.Regex(#"(?x) ^providers/.*/src/airflow/providers/| ^airflow-core/src/airflow/exceptions\.py$| ^airflow-core/src/airflow/models/renderedtifields\.py$| ^airflow-core/src/airflow/serialization/serialized_objects\.py$| ^airflow-core/src/airflow/serialization/serializers/kubernetes\.py$| ^airflow-core/src/airflow/utils/sqlalchemy\.py$"#)
-        check = #"./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.providers\.cncf\.kubernetes' --message "Only few k8s executors exceptions are allowed to use `airflow.providers.cncf.kubernetes`." {{files}}"#
+        check = #"uv run ./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.providers\.cncf\.kubernetes' --message "Only few k8s executors exceptions are allowed to use `airflow.providers.cncf.kubernetes`." {{files}}"#
     }
     // Name: Update mounts in the local yml file
     ["update-local-yml-file"] {
@@ -195,40 +195,40 @@ local local_hooks = new Mapping<String, Step> {
     // Name: Check for pydevd debug statements accidentally left
     ["check-pydevd-left-in-code"] {
         glob = List("**/.py")
-        check = #"pydevd.*settrace\( {{files}}"#
+        check = #"! grep -E pydevd.*settrace\( {{files}}"#
     }
     // Name: Check pytest.mark.db_test use in providers
     ["check-pytest-mark-db-test-in-providers"] {
         glob = Types.Regex(#"(?x) ^providers/airbyte/.*\.py$| ^providers/apache/beam/.*\.py$| ^providers/apache/flink/.*\.py$| ^providers/apache/iceberg/.*\.py$| ^providers/apache/kafka/.*\.py$| ^providers/apprise/.*\.py$| ^providers/arangodb/.*\.py$| ^providers/asana/.*\.py$| ^providers/atlassian/jira/.*\.py$| ^providers/cloudant/.*\.py$| ^providers/cohere/.*\.py$| ^providers/common/compat/.*\.py$| ^providers/common/messaging/.*\.py$| ^providers/datadog/.*\.py$| ^providers/dingding/.*\.py$| ^providers/discord/.*\.py$| ^providers/exasol/.*\.py$| ^providers/facebook/.*\.py$| ^providers/ftp/.*\.py$| ^providers/grpc/.*\.py$| ^providers/hashicorp/.*\.py$| ^providers/imap/.*\.py$| ^providers/influxdb/.*\.py$| ^providers/jdbc/.*\.py$| ^providers/jenkins/.*\.py$| ^providers/mongo/.*\.py$| ^providers/microsoft/psrp/.*\.py$| ^providers/microsoft/winrm/.*\.py$| ^providers/neo4j/.*\.py$| ^providers/odbc/.*\.py$| ^providers/openai/.*\.py$| ^providers/openfaas/.*\.py$| ^providers/opsgenie/.*\.py$| ^providers/oracle/.*\.py$| ^providers/pagerduty/.*\.py$| ^providers/pgvector/.*\.py$| ^providers/pinecone/.*\.py$| ^providers/postgres/.*\.py$| ^providers/presto/.*\.py$| ^providers/segment/.*\.py$| ^providers/sendgrid/.*\.py$| ^providers/singularity/.*\.py$| ^providers/slack/.*\.py$| ^providers/smtp/.*\.py$| ^providers/tableau/.*\.py$| ^providers/teradata/.*\.py$| ^providers/trino/.*\.py$| ^providers/vertica/.*\.py$| ^providers/yandex/.*\.py$| ^providers/zendesk/.*\.py$"#)
-        check = #"pytest\.mark\.db_test {{files}}"#
+        check = #"! grep -E pytest\.mark\.db_test {{files}}"#
     }
     // Name: Verify no hard-coded version in example dags
     ["check-links-to-example-dags-do-not-use-hardcoded-versions"] {
         glob = Types.Regex(#"^providers/.*/docs/.*\.rst"#)
         check = """
-(?i) .*https://github.*/main/providers/.*/src/airflow/providers/.*/example_dags/| .*https://github.*/master/providers/.*/src/airflow/providers/.*/example_dags/
+! grep -E (?i) .*https://github.*/main/providers/.*/src/airflow/providers/.*/example_dags/| .*https://github.*/master/providers/.*/src/airflow/providers/.*/example_dags/
  {{files}}
 """
     }
     // Name: Don't use safe in templates
     ["check-safe-filter-usage-in-html"] {
         glob = List("**/.html")
-        check = #"\|\s*safe {{files}}"#
+        check = #"! grep -E \|\s*safe {{files}}"#
     }
     // Name: No providers imports in core example DAGs
     ["check-no-providers-in-core-examples"] {
         glob = Types.Regex(#"^airflow-core/src/airflow/example_dags/.*\.py$"#)
-        check = #"^\s*from airflow\.providers.(?!standard.) {{files}}"#
+        check = #"! grep -E ^\s*from airflow\.providers.(?!standard.) {{files}}"#
     }
     // Name: Do not use DeprecationWarning in providers
     ["check-no-airflow-deprecation-in-providers"] {
         glob = Types.Regex(#"^providers/.*/src/airflow/providers/.*\.py$"#)
-        check = #"^\s*DeprecationWarning* {{files}}"#
+        check = #"! grep -E ^\s*DeprecationWarning* {{files}}"#
     }
     // Name: Don't use urlparse in code
     ["check-urlparse-usage-in-code"] {
         glob = List("**/.py")
-        check = #"^\s*from urllib\.parse import ((\|, )(urlparse\|urlunparse))+$ {{files}}"#
+        check = #"! grep -E ^\s*from urllib\.parse import ((\|, )(urlparse\|urlunparse))+$ {{files}}"#
     }
     // Name: Check NEW_SESSION is only used with @provide_session
     ["check-only-new-session-with-provide-session"] {
@@ -240,7 +240,7 @@ local local_hooks = new Mapping<String, Step> {
     ["check-for-inclusive-language"] {
         exclude = Types.Regex(#"(?x) ^airflow-core/src/airflow/ui/src/i18n/config\.ts$| ^airflow-core/src/airflow/ui/openapi-gen/| ^airflow-core/src/airflow/ui/public/i18n/locales/de/README\.md$| ^airflow-core/src/airflow/cli/commands/local_commands/fastapi_api_command\.py$| ^airflow-core/src/airflow/config_templates/| ^airflow-core/src/airflow/models/baseoperator\.py$| ^airflow-core/src/airflow/operators/__init__\.py$| ^providers/common/sql/tests/provider_tests/common/sql/operators/test_sql_execute\.py$| ^providers/amazon/src/airflow/providers/amazon/aws/hooks/emr\.py$| ^providers/amazon/src/airflow/providers/amazon/aws/operators/emr\.py$| ^providers/apache/cassandra/src/airflow/providers/apache/cassandra/hooks/cassandra\.py$| ^providers/apache/hive/src/airflow/providers/apache/hive/operators/hive_stats\.py$| ^providers/apache/hive/src/airflow/providers/apache/hive/transfers/vertica_to_hive\.py$| ^providers/apache/spark/src/airflow/providers/apache/spark/decorators/| ^providers/apache/spark/src/airflow/providers/apache/spark/hooks/| ^providers/apache/spark/src/airflow/providers/apache/spark/operators/| ^providers/exasol/src/airflow/providers/exasol/hooks/exasol\.py$| ^providers/fab/src/airflow/providers/fab/auth_manager/security_manager/| ^providers/fab/src/airflow/providers/fab/www/static/| ^providers/fab/src/airflow/providers/fab/www/templates/| ^providers/google/src/airflow/providers/google/cloud/hooks/bigquery\.py$| ^providers/google/src/airflow/providers/google/cloud/operators/cloud_build\.py$| ^providers/google/src/airflow/providers/google/cloud/operators/dataproc\.py$| ^providers/google/src/airflow/providers/google/cloud/operators/mlengine\.py$| ^providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/definition.py| ^providers/microsoft/azure/src/airflow/providers/microsoft/azure/hooks/cosmos\.py$| ^providers/microsoft/winrm/src/airflow/providers/microsoft/winrm/hooks/winrm\.py$| ^airflow-core/docs/.*commits\.rst$| ^providers/microsoft/winrm/src/airflow/providers/microsoft/winrm/operators/winrm\.py$| ^providers/opsgenie/src/airflow/providers/opsgenie/hooks/opsgenie\.py$| ^providers/redis/src/airflow/providers/redis/provider\.yaml$| ^airflow-core/src/airflow/serialization/serialized_objects\.py$| ^airflow-core/src/airflow/api_fastapi/auth/managers/simple/ui/pnpm-lock\.yaml$| ^airflow-core/src/airflow/ui/pnpm-lock\.yaml$| ^airflow-core/src/airflow/utils/db\.py$| ^airflow-core/src/airflow/utils/trigger_rule\.py$| ^chart/values.schema\.json$| ^helm-tests/tests/chart_utils/helm_template_generator\.py$| ^helm-tests/tests/chart_utils/ingress-networking-v1beta1\.json$| ^dev/| ^devel-common/src/docs/README\.rst$| ^docs/apache-airflow-providers-amazon/secrets-backends/aws-ssm-parameter-store\.rst$| ^providers/apache/kafka/docs/connections/kafka\.rst$| ^providers/apache/hdfs/docs/connections\.rst$| ^providers/apache/spark/docs/decorators/pyspark\.rst$| ^providers/microsoft/azure/docs/connections/azure_cosmos\.rst$| ^providers/fab/docs/auth-manager/webserver-authentication\.rst$| ^providers/google/docs/operators/cloud/kubernetes_engine\.rst$| ^providers/cncf/kubernetes/docs/operators\.rst$| ^.*/conf\.py$| ^.*/conf_constants\.py$| ^.*/provider_conf\.py$| ^devel-common/src/sphinx_exts/removemarktransform\.py| ^devel-common/src/tests_common/test_utils/db\.py| ^airflow-core/newsfragments/41761.significant\.rst$| ^scripts/ci/prek/vendor_k8s_json_schema\.py$| ^scripts/ci/docker-compose/integration-keycloak\.yml$| ^scripts/ci/docker-compose/keycloak/keycloak-entrypoint\.sh$| ^airflow-core/tests/| ^providers/.*/tests/| ^\.pre-commit-config\.yaml$| ^.*CHANGELOG\.(rst|txt)$| ^.*changelog\.(rst|txt)$| ^.*commits\.(rst|txt)$| ^.*RELEASE_NOTES\.rst$| ^contributing-docs/03_contributors_quick_start\.rst$| ^.*\.(png|gif|jp[e]?g|svg|tgz|lock)$| git| ^airflow-core/newsfragments/43349\.significant\.rst$| ^airflow-core/newsfragments/41368\.significant\.rst$| .*/dist/.*| package-lock\.json$| ^providers/edge3/src/airflow/providers/edge3/plugins/www/pnpm-lock.yaml$"#)
         check = #"""
-(?ix) (black|white)[_-]?list| \bshe\b| \bhe\b| \bher\b| \bhis\b| \bmaster\b| \bslave\b| \bsanity\b| \bdummy\b
+! grep -E (?ix) (black|white)[_-]?list| \bshe\b| \bhe\b| \bher\b| \bhis\b| \bmaster\b| \bslave\b| \bsanity\b| \bdummy\b
  {{files}}
 """#
     }
@@ -265,27 +265,27 @@ local local_hooks = new Mapping<String, Step> {
     ["check-base-operator-usage"] {
         glob = List("**/.py")
         exclude = Types.Regex("(?x) ^airflow-core/src/airflow/decorators/.*$| ^airflow-core/src/airflow/hooks/.*$| ^airflow-core/src/airflow/operators/.*$| ^providers/.*$")
-        check = #"from airflow\.models import.* BaseOperator\b {{files}}"#
+        check = #"! grep -E from airflow\.models import.* BaseOperator\b {{files}}"#
     }
     // Original ID: check-base-operator-usage
     // Name: Check BaseOperatorLink core imports
     ["check-base-operator-usage-2"] {
         glob = List("**/.py")
         exclude = Types.Regex("(?x) ^airflow-core/src/airflow/decorators/.*$| ^airflow-core/src/airflow/hooks/.*$| ^airflow-core/src/airflow/operators/.*$| ^providers/.*/src/airflow/providers/.*$| ^providers/.*/src/airflow/providers/standard/sensors/.*$")
-        check = #"^\s*from airflow\.models\.baseoperatorlink import BaseOperatorLink\b {{files}}"#
+        check = #"! grep -E ^\s*from airflow\.models\.baseoperatorlink import BaseOperatorLink\b {{files}}"#
     }
     // Original ID: check-base-operator-usage
     // Name: Check BaseOperator other imports
     ["check-base-operator-usage-3"] {
         glob = Types.Regex(#"(?x) ^providers/.*/src/airflow/providers/.*\.py$"#)
         exclude = Types.Regex(#"^providers/standard/.*/.*\.py$"#)
-        check = #"from airflow\.models\.baseoperator import.* BaseOperator {{files}}"#
+        check = #"! grep -E from airflow\.models\.baseoperator import.* BaseOperator {{files}}"#
     }
     // Name: Check providers import hook lineage code from compat
     ["check-get-lineage-collector-providers"] {
         glob = Types.Regex(#"^providers/.*/src/airflow/providers/.*\.py$"#)
         exclude = Types.Regex(#"^providers/common/compat/src/airflow/providers/common/compat/.*\.py$"#)
-        check = #"./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.lineage\.hook' --message "Only TYPE_CHECKING imports from `airflow.lineage.hook` are allowed in providers." --only_top_level {{files}}"#
+        check = #"uv run ./scripts/ci/prek/check_airflow_imports.py --pattern '^airflow\.lineage\.hook' --message "Only TYPE_CHECKING imports from `airflow.lineage.hook` are allowed in providers." --only_top_level {{files}}"#
     }
     // Name: Check @task decorator implements custom_operator_name
     ["check-decorated-operator-implements-custom-name"] {
@@ -296,22 +296,22 @@ local local_hooks = new Mapping<String, Step> {
     ["check-core-deprecation-classes"] {
         glob = List("**/.py")
         exclude = Types.Regex(#"^airflow-core/src/airflow/configuration\.py$|^airflow-core/tests/.*$|^providers/.*/src/airflow/providers/|^scripts/in_container/verify_providers\.py$|^providers/.*/tests/.*$|^devel-common/"#)
-        check = "category=DeprecationWarning|category=PendingDeprecationWarning {{files}}"
+        check = "! grep -E category=DeprecationWarning|category=PendingDeprecationWarning {{files}}"
     }
     // Name: Check session util imports
     ["check-provide-create-sessions-imports"] {
         glob = List("**/.py")
-        check = #"from airflow\.utils\.db import.* (NEW_SESSION|provide_session|create_session) {{files}}"#
+        check = #"! grep -E from airflow\.utils\.db import.* (NEW_SESSION|provide_session|create_session) {{files}}"#
     }
     // Name: Make sure LoggingMixin is not used alone
     ["check-incorrect-use-of-LoggingMixin"] {
         glob = List("**/.py")
-        check = #"LoggingMixin\(\) {{files}}"#
+        check = #"! grep -E LoggingMixin\(\) {{files}}"#
     }
     // Name: start_date not in default_args
     ["check-start-date-not-used-in-defaults"] {
         glob = Types.Regex(#"\.*example_dags.*\.py$"#)
-        check = #"default_args\s*=\s*{\s*("|')start_date("|')|("|')start_date("|'): {{files}}"#
+        check = #"! grep -E default_args\s*=\s*{\s*("|')start_date("|')|("|')start_date("|'): {{files}}"#
     }
     // Name: Check if licenses are OK for Apache
     ["check-apache-license-rat"] {
@@ -618,7 +618,7 @@ track and have security implications. Please remove the zip file from the reposi
         glob = Types.Regex(#"^airflow-core/src/airflow/migrations/versions/.*\.py$"#)
         exclude = Types.Regex("^airflow-core/src/airflow/migrations/versions/0028_3_0_0_drop_ab_user_id_foreign_key.py$")
         check = #"""
-(?ix) \bab_permission\b| \bab_view_menu\b| \bab_role\b| \bab_permission_view\b| \bab_permission_view_role\b| \bab_user\b| \bab_user_role\b| \bab_register_user\b
+! grep -E (?ix) \bab_permission\b| \bab_view_menu\b| \bab_role\b| \bab_permission_view\b| \bab_permission_view_role\b| \bab_user\b| \bab_user_role\b| \bab_register_user\b
  {{files}}
 """#
     }
@@ -710,19 +710,19 @@ track and have security implications. Please remove the zip file from the reposi
     // Name: Generate the FastAPI API spec for FAB
     ["generate-openapi-spec-fab"] {
         glob = Types.Regex(#"^providers/fab/src/airflow/providers/fab/auth_manager/api_fastapi/.*\.py$"#)
-        check = "./scripts/ci/prek/generate_openapi_spec_providers.py fab"
+        check = "uv run ./scripts/ci/prek/generate_openapi_spec_providers.py fab"
         // pass_filenames was false in pre-commit
     }
     // Name: Generate the FastAPI API spec for Edge
     ["generate-openapi-spec-edge"] {
         glob = Types.Regex(#"^providers/edge3/src/airflow/providers/edge3/worker_api/.*\.py$"#)
-        check = "./scripts/ci/prek/generate_openapi_spec_providers.py edge"
+        check = "uv run ./scripts/ci/prek/generate_openapi_spec_providers.py edge"
         // pass_filenames was false in pre-commit
     }
     // Name: Generate the FastAPI API spec for Keycloak
     ["generate-openapi-spec-keycloak"] {
         glob = Types.Regex(#"^providers/keycloak/src/airflow/providers/keycloak/auth_manager/.*\.py$"#)
-        check = "./scripts/ci/prek/generate_openapi_spec_providers.py keycloak"
+        check = "uv run ./scripts/ci/prek/generate_openapi_spec_providers.py keycloak"
         // pass_filenames was false in pre-commit
     }
     // Name: Check i18n files validity
@@ -795,7 +795,7 @@ bash -c ' uv run -p 3.12 --no-dev --no-progress --active --group codegen --proje
     ["check-airflow-version-checks-in-core"] {
         glob = Types.Regex(#"^airflow-core/.*\.py$"#)
         exclude = Types.Regex(#"(?x) ^airflow-core/tests/integration/otel/dags/otel_test_dag_with_pause_between_tasks\.py$| ^airflow-core/tests/integration/otel/dags/otel_test_dag_with_pause_in_task\.py$| ^airflow-core/tests/integration/otel/test_otel\.py$| ^airflow-core/tests/unit/core/test_configuration\.py$| ^airflow-core/tests/unit/models/test_renderedtifields\.py$| ^airflow-core/tests/unit/models/test_variable\.py$"#)
-        check = "import AIRFLOW_V_ {{files}}"
+        check = "! grep -E import AIRFLOW_V_ {{files}}"
     }
     // Name: Check for SDK imports in core files
     ["check-sdk-imports"] {
@@ -1035,7 +1035,6 @@ local custom_steps = new Mapping<String, Step> {
     ["insert-license-11"] {
         exclude = Types.Regex(#"^\.github/.*$"#)
         // files: \.cfg$|\.conf$|\.ini$|\.ldif$|\.properties$|\.service$|\.tf$|Dockerfile.*$
-
         // TODO: Configure check and/or fix commands
         // check = "..."
         // fix = "..."
@@ -1153,57 +1152,57 @@ local manual_steps = new Mapping<String, Step> {
     // Name: Run mypy for dev (manual)
     ["mypy-dev-2"] {
         glob = Types.Regex(#"^.*\.py$"#)
-        check = "./scripts/ci/prek/mypy_folder.py dev"
+        check = "uv run ./scripts/ci/prek/mypy_folder.py dev"
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-airflow-core
     // Name: Run mypy for airflow-core (manual)
     ["mypy-airflow-core-2"] {
         glob = Types.Regex(#"^airflow-core/.*\.py$"#)
-        check = "./scripts/ci/prek/mypy_folder.py airflow-core"
+        check = "uv run ./scripts/ci/prek/mypy_folder.py airflow-core"
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-providers
     // Name: Run mypy for providers (manual)
     ["mypy-providers-2"] {
         glob = Types.Regex(#"^.*\.py$"#)
-        check = "./scripts/ci/prek/mypy_folder.py providers"
+        check = "uv run ./scripts/ci/prek/mypy_folder.py providers"
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-task-sdk
     // Name: Run mypy for task-sdk (manual)
     ["mypy-task-sdk-2"] {
         glob = Types.Regex(#"^.*\.py$"#)
-        check = "./scripts/ci/prek/mypy_folder.py task-sdk"
+        check = "uv run ./scripts/ci/prek/mypy_folder.py task-sdk"
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-devel-common
     // Name: Run mypy for devel-common (manual)
     ["mypy-devel-common-2"] {
         glob = Types.Regex(#"^.*\.py$"#)
-        check = "./scripts/ci/prek/mypy_folder.py devel-common"
+        check = "uv run ./scripts/ci/prek/mypy_folder.py devel-common"
         // pass_filenames was false in pre-commit
     }
     // Original ID: mypy-airflow-ctl
     // Name: Run mypy for airflow-ctl (manual)
     ["mypy-airflow-ctl-2"] {
         glob = Types.Regex(#"^.*\.py$"#)
-        check = "./scripts/ci/prek/mypy_folder.py airflow-ctl"
+        check = "uv run ./scripts/ci/prek/mypy_folder.py airflow-ctl"
         // pass_filenames was false in pre-commit
     }
 }
 
 hooks {
-    ["pre-push"] {
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
         steps {
             ...linters
             ...local_hooks
             ...custom_steps
         }
     }
-    ["pre-commit"] {
-        fix = true
-        stash = "git"
+    ["pre-push"] {
         steps {
             ...linters
             ...local_hooks
